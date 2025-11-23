@@ -50,7 +50,7 @@ export class UsersService {
   }
 
   // دالة مساعدة للـ Login
-async findByEmail(email: string): Promise<User | null> {
-  return this.userModel.findOne({ email }).exec();
-}
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email }).exec();
+  }
 }

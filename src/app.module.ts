@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { RisksModule } from './risks/risks.module';
+import { ControlsModule } from './controls/controls.module';
 
 @Module({
   imports: [
@@ -32,6 +33,8 @@ import { RisksModule } from './risks/risks.module';
     CommonModule,
 
     RisksModule,
+
+    ControlsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

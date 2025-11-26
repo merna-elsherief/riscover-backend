@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';import { InjectModel } from '@nestjs/mongoose';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateRiskDto } from './dto/create-risk.dto';
+import { UpdateRiskStatusDto } from './dto/update-risk-status.dto';
 import { Risk } from './entities/risk.entity';
 import { CommonService } from '../common/common.service';
-import { UpdateRiskStatusDto } from './dto/update-risk-status.dto';
 import { UserRole } from '../users/entities/user.entity';
 import { RiskStatus } from './enums/risk-status.enum';
 
@@ -11,79 +12,93 @@ import { RiskStatus } from './enums/risk-status.enum';
 export class RisksService {
   constructor(
     @InjectModel(Risk.name) private riskModel: Model<Risk>,
-    private commonService: CommonService, // حقن خدمة العد
+    private commonService: CommonService,
   ) {}
 
-  // لاحظي هنا: الدالة بتاخد الـ DTO وكمان بيانات اليوزر من التوكن
+  // 1. إنشاء خطر جديد (مع التايم لاين)
   async create(createRiskDto: CreateRiskDto, user: any): Promise<Risk> {
-    
-    // 1. نجيب الرقم الجديد من العداد
     const seqNum = await this.commonService.getNextSequence('risks');
-    
-    // 2. نظبط شكل الـ ID (مثلاً RISK-001)
-    // padStart(3, '0') بتخلي الرقم 1 يبقى 001
     const formattedId = `RISK-${seqNum.toString().padStart(3, '0')}`;
 
-    // 3. نجهز الأوبجكت للحفظ
     const newRisk = new this.riskModel({
-      ...createRiskDto,           // (Title, Description, Likelihood, Impact)
-      siNo: formattedId,          // الرقم الآلي
-      owner: user.userId,         // ID اليوزر من التوكن
-      department: user.department // قسم اليوزر من التوكن
+      ...createRiskDto,
+      siNo: formattedId,
+      owner: user.userId,
+      department: user.department,
+      // 🆕 أول حدث في التايم لاين: تم الإنشاء
+      timeline: [{
+        user: user.userId,
+        action: 'Created',
+        details: 'Risk created via API',
+        timestamp: new Date()
+      }]
     });
 
-    // 4. الحفظ (الـ Score هيتحسب لوحده في الـ Hook اللي في الـ Schema)
     return newRisk.save();
   }
 
-  async findAll() {
-  return this.riskModel.find()
-    .populate('owner', 'firstName lastName email department') // هات الحقول دي بس من جدول اليوزر
-    .exec();
-  }
-
-  async findOne(id: string) {
-  return this.riskModel.findById(id)
-    .populate('owner', 'firstName lastName email department')
-    .exec();
-  }
-  // 4. تحديث حالة الخطر (المنطقة المحظورة ⛔)
+  // 2. تحديث الحالة (مع التايم لاين)
   async updateStatus(id: string, updateDto: UpdateRiskStatusDto, user: any): Promise<Risk> {
-    // أ) لازم نتأكد إن الخطر موجود الأول
     const risk = await this.riskModel.findById(id);
-    if (!risk) {
-      throw new NotFoundException('Risk not found');
-    }
+    if (!risk) throw new NotFoundException('Risk not found');
 
-    // ب) تطبيق القواعد (Business Rules)
-    
-    // القاعدة: لو الحالة "مقبول" (Accepted)
+    // التحقق من الصلاحيات (BU Head)
     if (updateDto.status === RiskStatus.ACCEPTED) {
+      const isAuthorized = user.role === UserRole.BU_HEAD || user.role === UserRole.ADMIN;
+      if (!isAuthorized) throw new ForbiddenException('Only BU Heads can accept risks');
       
-      // 1. لازم يكون الشخص BU Head أو Admin
-      const isAuthorizedRole = user.role === UserRole.BU_HEAD || user.role === UserRole.ADMIN;
-      if (!isAuthorizedRole) {
-        throw new ForbiddenException('Only BU Heads or Admins can accept risks!');
-      }
-
-      // 2. لو هو BU Head، لازم يكون نفس القسم بتاع الخطر
       if (user.role === UserRole.BU_HEAD && user.department !== risk.department) {
-        throw new ForbiddenException('You are not authorized to approve risks for this department!');
+        throw new ForbiddenException('Department mismatch');
       }
-
-      // هنا ممكن نضيف لوجيك زيادة: نحفظ تاريخ الموافقة ومين اللي وافق في حقول خاصة
-      // risk.acceptedBy = user.userId;
-      // risk.acceptedAt = new Date();
     }
 
-    // ج) التحديث والحفظ
+    const oldStatus = risk.status;
     risk.status = updateDto.status;
     
-    // لو فيه تبرير جاي في الـ Body، ممكن نحفظه (لو ضفناه في الـ Entity)
-    // if (updateDto.justification) {
-    //   risk.justification = updateDto.justification;
-    // }
+    if (updateDto.justification) {
+      risk.acceptanceJustification = updateDto.justification;
+    }
+
+    // 🆕 تسجيل تغيير الحالة في التايم لاين
+    risk.timeline.push({
+      user: user.userId,
+      action: 'Status Change',
+      details: `Changed status from ${oldStatus} to ${updateDto.status}`,
+      timestamp: new Date()
+    } as any);
 
     return risk.save();
   }
+
+  // 3. إضافة تعليق (Timeline Only)
+  async addComment(id: string, comment: string, user: any): Promise<Risk> {
+    const risk = await this.riskModel.findById(id);
+    if (!risk) throw new NotFoundException('Risk not found');
+
+    risk.timeline.push({
+      user: user.userId,
+      action: 'Comment',
+      details: comment,
+      timestamp: new Date()
+    } as any);
+
+    return risk.save();
+  }
+
+  // الدوال العادية
+  async findAll() {
+    return this.riskModel.find()
+      .populate('owner', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async findOne(id: string) {
+    return this.riskModel.findById(id)
+      .populate('owner', 'firstName lastName email')
+      .populate('controls') // عشان يظهر تفاصيل الضوابط لو موجودة
+      .populate('timeline.user', 'firstName lastName') // عشان يظهر اسم اللي عمل الكومنت
+      .exec();
+  }
+  
 }

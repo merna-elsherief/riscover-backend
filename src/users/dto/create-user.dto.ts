@@ -27,6 +27,6 @@ export class CreateUserDto {
   role: string;
 
   @IsString()
-  @IsNotEmpty()
+  // @IsNotEmpty()
   department: string;
 } 

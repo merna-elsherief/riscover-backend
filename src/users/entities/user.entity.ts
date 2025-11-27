@@ -43,8 +43,8 @@ export class User {
   })
   role: string;
 
-  @Prop({ required: true })
-  department: string;
+  @Prop({ type: String, required: false })
+  department?: string;
 
   @Prop({ type: Object, default: {} }) 
   dashboardPreferences: Record<string, any>; 

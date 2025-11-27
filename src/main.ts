@@ -26,6 +26,11 @@ async function bootstrap() {
   // الرابط اللي هتفتح عليه الصفحة (http://localhost:3000/api)
   SwaggerModule.setup('api', app, document);
   // ===========================================
+  app.enableCors({
+    origin: 'http://localhost:5173', // السماح للـ frontend
+    credentials: true,               // لو عايزة ترسل cookies أو توكن
+  });
+
   
   await app.listen(process.env.PORT ?? 3000);
 }

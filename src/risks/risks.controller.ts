@@ -39,13 +39,6 @@ export class RisksController {
     return this.risksService.findAll();
   }
 
-  // 🆕 دالة جلب الرقم القادم (لازم تتحط قبل @Get(':id'))
-@Get('next-id')
-@ApiOperation({ summary: 'Get the next available Risk ID (Preview)' })
-getNextId() {
-  return this.risksService.getNextId();
-}
-
   // --- 3. عرض خطر واحد بالتفصيل ---
   @Get(':id')
   @ApiOperation({ summary: 'Get risk details (with timeline & controls)' })

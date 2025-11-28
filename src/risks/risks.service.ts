@@ -100,16 +100,5 @@ export class RisksService {
       .populate('timeline.user', 'firstName lastName') // عشان يظهر اسم اللي عمل الكومنت
       .exec();
   }
-
-  async getNextId(): Promise<{ nextId: string }> {
-  // 1. شوف الرقم اللي عليه الدور
-  const seqNum = await this.commonService.peekNextSequence('risks');
-  
-  // 2. ظبط الشكل (RISK-005)
-  const formattedId = `RISK-${seqNum.toString().padStart(3, '0')}`;
-  
-  // 3. رجعه كـ Object
-  return { nextId: formattedId };
- }
   
 }

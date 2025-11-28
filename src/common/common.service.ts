@@ -21,11 +21,4 @@ export class CommonService {
     
     return counter.seq;
   }
-
-  async peekNextSequence(counterName: string): Promise<number> {
-  const counter = await this.counterModel.findOne({ name: counterName });
-  // لو العداد موجود، رجعي الرقم الحالي + 1
-  // لو مش موجود (لسه أول مرة)، رجعي 1
-  return counter ? counter.seq + 1 : 1;
- }
 }

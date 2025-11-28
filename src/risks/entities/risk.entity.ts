@@ -46,10 +46,6 @@ export class Risk {
   @Prop({ required: true })
   title: string;
 
-  // 👇 الإضافة الجديدة
-  @Prop({ required: true }) 
-  affectedSystem: string; // مثال: "Payment Gateway", "HR Portal"
-
   @Prop()
   description: string;
 

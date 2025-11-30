@@ -1,105 +1,127 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { User } from '../../users/entities/user.entity';
+import { Control } from '../../controls/entities/control.entity';
 
-// استيراد الـ Enums المنظمة
-import { RiskPriority } from '../enums/risk-priority.enum';
+// Enums
+import { RiskStatus } from '../enums/risk-status.enum';
 import { RiskTreatment } from '../enums/risk-treatment.enum';
 import { RiskCategory } from '../enums/risk-category.enum';
+import { RiskPriority } from '../enums/risk-priority.enum';
+import { RiskRating } from '../enums/risk-rating.enum';
 
 export type RiskDocument = HydratedDocument<Risk>;
 
-// كلاس التايم لاين (زي ما هو)
+// --- Sub-Documents (Timeline, Tasks, Residual) ---
+
+// 1. Timeline
 @Schema()
 export class RiskTimelineItem {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-  user: User; // مين اللي عمل التغيير (Log in user)
+  user: User;
   @Prop() action: string;
   @Prop() details: string;
   @Prop({ default: Date.now }) timestamp: Date;
 }
 const RiskTimelineSchema = SchemaFactory.createForClass(RiskTimelineItem);
 
+// 2. Tasks (Treatment Plan Table) 🆕
+@Schema()
+export class RiskTask {
+  @Prop({ required: true }) title: string;
+  @Prop() assignee: string; // John Smith
+  @Prop({ default: 'Not Started', enum: ['Not Started', 'In Progress', 'Completed'] }) 
+  status: string;
+  @Prop() dueDate: Date;
+}
+const RiskTaskSchema = SchemaFactory.createForClass(RiskTask);
+
+// 3. Residual Risk
+class ResidualRiskScore {
+  @Prop() likelihood: number;
+  @Prop() impact: number;
+  @Prop() score: number;
+  @Prop({ type: String, enum: RiskRating }) rating: RiskRating;
+}
+
+// --- Main Entity ---
 @Schema({ timestamps: true })
 export class Risk {
-  // --- 1. Risk Identification ---
-  @Prop({ required: true, unique: true })
-  siNo: string; // الشكل الجديد: R-2025-001
-
-  @Prop({ required: true })
-  title: string; // Risk Name
-
-  @Prop()
-  description: string;
-
-  @Prop({ type: String, enum: RiskCategory, default: RiskCategory.SECURITY })
+  // Identification
+  @Prop({ required: true, unique: true }) siNo: string; // R-2025-001
+  @Prop({ required: true }) title: string;
+  @Prop() description: string;
+  @Prop({ type: String, enum: RiskCategory, default: RiskCategory.OPERATIONAL }) 
   category: RiskCategory;
 
-  // --- 2. Assets & Systems (مؤقتاً نصوص) ---
-  @Prop({ type: [String], default: [] })
-  assetTags: string[]; // مصفوفة كلمات
+  // Assets & Scope
+  @Prop({ type: [String], default: [] }) assetTags: string[];
+  @Prop() affectedSystem: string;
 
-  @Prop()
-  affectedSystem: string; // Impacted System
+  // People
+  @Prop() riskOwnerEmail: string;
+  @Prop() securityAnalystEmail: string;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' }) createdBy: User;
+  @Prop() department: string;
 
-  // --- 3. المسؤولين (Emails مؤقتاً) ---
-  @Prop()
-  riskOwnerEmail: string; // الإيميل اللي هيتكتب في الفورم
+  // Assessment (Inherent)
+  @Prop({ min: 1, max: 5, required: true }) impact: number;
+  @Prop({ min: 1, max: 5, required: true }) likelihood: number;
+  @Prop() score: number;
+  @Prop({ type: String, enum: RiskRating }) rating: RiskRating;
 
-  @Prop()
-  securityAnalystEmail: string; // إيميل المحلل
+  // Assessment (Residual)
+  @Prop({ type: ResidualRiskScore }) residualRisk: ResidualRiskScore;
 
-  // ده الشخص اللي "أنشأ" الخطر فعلياً (System User) - عشان الـ Audit
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-  createdBy: User;
-
-  // --- 4. التقييم (Assessment) ---
-  @Prop({ min: 1, max: 5, required: true })
-  impact: number;
-
-  @Prop({ min: 1, max: 5, required: true })
-  likelihood: number;
-
-  @Prop()
-  score: number; // Rating (محسوب)
-
-  // --- 5. المعالجة والأولوية ---
-  @Prop({ type: String, enum: RiskPriority, default: RiskPriority.MEDIUM })
-  priority: RiskPriority; // Manual Priority Selection
-
-  @Prop({ type: String, enum: RiskTreatment, default: RiskTreatment.MITIGATE })
+  // Treatment & Priority
+  @Prop({ type: String, enum: RiskPriority, default: RiskPriority.MEDIUM }) 
+  priority: RiskPriority;
+  
+  @Prop({ type: String, enum: RiskTreatment, default: RiskTreatment.MITIGATE }) 
   treatmentStrategy: RiskTreatment;
 
-  @Prop()
-  remediationPlan: string;
-
-  @Prop()
-  remediationPlanSummary: string;
-
-  @Prop()
-  resourcesRequired: string;
-
-  @Prop()
-  dueDate: Date;
-
-  @Prop({ default: false })
-  automaticReminders: boolean;
-
-  // --- 6. السجل ---
-  @Prop({ type: [RiskTimelineSchema], default: [] })
-  timeline: RiskTimelineItem[];
+  // Remediation (Plan + Tasks) 🆕
+  @Prop() remediationPlanDescription: string; // النص الكبير
+  @Prop() remediationPlanSummary: string;
+  @Prop() resourcesRequired: string;
+  @Prop({ default: false }) automaticReminders: boolean;
   
-  // الحالة (Draft, etc..) لسه موجودة
-  @Prop({ default: 'Draft' })
-  status: string;
+  @Prop({ type: [RiskTaskSchema], default: [] }) 
+  tasks: RiskTask[]; // الجدول
+
+  @Prop() dueDate: Date;
+
+  // Linkage
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Control' }] }) 
+  controls: Control[];
+
+  @Prop({ type: [RiskTimelineSchema], default: [] }) 
+  timeline: RiskTimelineItem[];
+
+  @Prop({ type: String, enum: RiskStatus, default: RiskStatus.DRAFT }) 
+  status: RiskStatus;
+  
+  @Prop() acceptanceJustification: string;
 }
 
 export const RiskSchema = SchemaFactory.createForClass(Risk);
 
-// معادلة حساب الـ Score
+// Score Calculation Logic
+const calculateRating = (score: number): RiskRating => {
+  if (score >= 20) return RiskRating.CRITICAL;
+  if (score >= 12) return RiskRating.HIGH;
+  if (score >= 6) return RiskRating.MEDIUM;
+  return RiskRating.LOW;
+};
+
 RiskSchema.pre('save', function(next) {
   if (this.likelihood && this.impact) {
     this.score = this.likelihood * this.impact;
+    this.rating = calculateRating(this.score);
+  }
+  if (this.residualRisk && this.residualRisk.likelihood && this.residualRisk.impact) {
+    this.residualRisk.score = this.residualRisk.likelihood * this.residualRisk.impact;
+    this.residualRisk.rating = calculateRating(this.residualRisk.score);
   }
   next();
 });

@@ -1,88 +1,71 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsArray, IsEnum, IsEmail, IsBoolean, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsArray, IsEnum, IsEmail, IsBoolean, IsDateString, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer'; // ⚠️ مهم
 
-// استيراد الـ Enums
 import { RiskCategory } from '../enums/risk-category.enum';
 import { RiskPriority } from '../enums/risk-priority.enum';
 import { RiskTreatment } from '../enums/risk-treatment.enum';
 
-export class CreateRiskDto {
-  // Risk Identification
-  @ApiProperty({ example: 'Phishing Attack' })
-  @IsString()
-  @IsNotEmpty()
+// DTO فرعي للمهام
+class CreateTaskDto {
+  @ApiProperty({ example: 'Automate journal entry validation' })
+  @IsString() @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: 'Description of the risk...' })
-  @IsString()
-  @IsNotEmpty()
-  description: string;
+  @ApiProperty({ example: 'John Smith' })
+  @IsString() @IsNotEmpty()
+  assignee: string;
+
+  @ApiProperty({ example: '2025-10-15' })
+  @IsDateString()
+  dueDate: string;
+}
+
+export class CreateRiskDto {
+  // Basic Info
+  @ApiProperty({ example: 'Financial Reporting Errors' })
+  @IsString() @IsNotEmpty() title: string;
+
+  @ApiProperty({ example: 'Risk of misstatements due to manual entries...' })
+  @IsString() @IsNotEmpty() description: string;
 
   @ApiProperty({ enum: RiskCategory })
-  @IsEnum(RiskCategory)
-  category: RiskCategory;
+  @IsEnum(RiskCategory) category: RiskCategory;
 
   // Assets
-  @ApiProperty({ example: ['Server', 'Database'], isArray: true })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @ApiProperty({ example: ['SQL Server', 'General Ledger'], isArray: true })
+  @IsOptional() @IsArray() @IsString({ each: true })
   assetTags?: string[];
 
-  @ApiProperty({ example: 'ERP System' })
-  @IsString()
-  @IsNotEmpty()
-  affectedSystem: string;
+  @ApiProperty({ example: 'Finance System' })
+  @IsString() @IsNotEmpty() affectedSystem: string;
 
-  // People (Emails) 📧
-  @ApiProperty({ example: 'owner@company.com' })
-  @IsEmail()
-  @IsNotEmpty()
-  riskOwnerEmail: string;
-
-  @ApiProperty({ example: 'analyst@company.com' })
-  @IsEmail()
-  @IsNotEmpty()
-  securityAnalystEmail: string;
+  // Emails
+  @ApiProperty() @IsEmail() riskOwnerEmail: string;
+  @ApiProperty() @IsEmail() securityAnalystEmail: string;
 
   // Scoring
-  @ApiProperty({ example: 4, minimum: 1, maximum: 5 })
-  @IsInt() @Min(1) @Max(5)
-  impact: number;
+  @ApiProperty({ example: 4 }) @IsInt() @Min(1) @Max(5) impact: number;
+  @ApiProperty({ example: 3 }) @IsInt() @Min(1) @Max(5) likelihood: number;
 
-  @ApiProperty({ example: 3, minimum: 1, maximum: 5 })
-  @IsInt() @Min(1) @Max(5)
-  likelihood: number;
-
-  // Priority & Treatment
+  // Treatment & Plan
   @ApiProperty({ enum: RiskPriority })
-  @IsOptional()
-  @IsEnum(RiskPriority)
-  priority?: RiskPriority;
+  @IsOptional() @IsEnum(RiskPriority) priority?: RiskPriority;
 
   @ApiProperty({ enum: RiskTreatment })
+  @IsOptional() @IsEnum(RiskTreatment) treatmentStrategy?: RiskTreatment;
+
+  @ApiProperty() @IsOptional() @IsString() remediationPlanDescription?: string;
+  @ApiProperty() @IsOptional() @IsString() remediationPlanSummary?: string;
+  @ApiProperty() @IsOptional() @IsString() resourcesRequired?: string;
+  @ApiProperty() @IsOptional() @IsBoolean() automaticReminders?: boolean;
+  @ApiProperty() @IsOptional() @IsDateString() dueDate?: string;
+
+  // Tasks Array 🆕
+  @ApiProperty({ type: [CreateTaskDto] })
   @IsOptional()
-  @IsEnum(RiskTreatment)
-  treatmentStrategy?: RiskTreatment;
-
-  // Remediation
-  @ApiProperty({ required: false })
-  @IsOptional() @IsString()
-  remediationPlan?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional() @IsString()
-  remediationPlanSummary?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional() @IsString()
-  resourcesRequired?: string;
-
-  @ApiProperty({ example: true })
-  @IsOptional() @IsBoolean()
-  automaticReminders?: boolean;
-
-  @ApiProperty({ required: false })
-  @IsOptional() @IsDateString()
-  dueDate?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateTaskDto)
+  tasks?: CreateTaskDto[];
 }

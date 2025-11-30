@@ -4,181 +4,238 @@ import { UsersService } from './users/users.service';
 import { ControlsService } from './controls/controls.service';
 import { RisksService } from './risks/risks.service';
 
-// استيراد الـ Enums (تأكدي من المسارات)
+// Enums
 import { UserRole } from './users/entities/user.entity';
 import { ControlType } from './controls/enums/control-type.enum';
 import { RiskCategory } from './risks/enums/risk-category.enum';
 import { RiskPriority } from './risks/enums/risk-priority.enum';
 import { RiskTreatment } from './risks/enums/risk-treatment.enum';
+import { RiskStatus } from './risks/enums/risk-status.enum';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
-
-  // استدعاء الخدمات
+  
   const usersService = app.get(UsersService);
   const controlsService = app.get(ControlsService);
   const risksService = app.get(RisksService);
 
-  console.log('🚀 Starting Database Seeding...\n');
+  console.log('🚀 Starting "Mega" Seeding...\n');
 
   // ==========================================
-  // 1. زراعة المستخدمين (Users)
+  // 1. Users (Team Roster)
   // ==========================================
-  console.log('👤 Seeding Users...');
+  console.log('👤 Creating Team Members...');
   
   const usersData = [
-    {
-      firstName: 'Admin', lastName: 'System', username: 'admin',
-      email: 'admin@riscover.com', password: '123',
-      role: UserRole.ADMIN, department: 'Management'
-    },
-    {
-      firstName: 'Hassan', lastName: 'IT Manager', username: 'hassan_head',
-      email: 'hassan@riscover.com', password: '123',
-      role: UserRole.BU_HEAD, department: 'IT'
-    },
-    {
-      firstName: 'Mona', lastName: 'HR Manager', username: 'mona_hr',
-      email: 'mona@riscover.com', password: '123',
-      role: UserRole.BU_HEAD, department: 'HR'
-    },
-    {
-      firstName: 'Ali', lastName: 'Risk Owner', username: 'ali_it',
-      email: 'ali@riscover.com', password: '123',
-      role: UserRole.RISK_OWNER, department: 'IT'
-    },
-    {
-      firstName: 'Sara', lastName: 'Compliance', username: 'sara_comp',
-      email: 'sara@riscover.com', password: '123',
-      role: UserRole.COMPLIANCE_MANAGER, department: 'Risk Dept'
-    },
-    // يوزر جديد عشان نستخدمه كمحلل أمني
-    {
-      firstName: 'Ramy', lastName: 'Analyst', username: 'ramy_sec',
-      email: 'ramy@riscover.com', password: '123',
-      role: UserRole.SECURITY_ANALYST, department: 'Cybersecurity'
-    }
+    // --- Management ---
+    { firstName: 'Admin', lastName: 'System', username: 'admin', email: 'admin@riscover.com', role: UserRole.ADMIN, department: 'Board' },
+    
+    // --- Business Unit Heads ---
+    { firstName: 'Hassan', lastName: 'El-Sayed', username: 'head_it', email: 'hassan@riscover.com', role: UserRole.BU_HEAD, department: 'IT' },
+    { firstName: 'Mona', lastName: 'Zaki', username: 'head_hr', email: 'mona@riscover.com', role: UserRole.BU_HEAD, department: 'HR' },
+    { firstName: 'Khaled', lastName: 'Salem', username: 'head_fin', email: 'khaled@riscover.com', role: UserRole.BU_HEAD, department: 'Finance' },
+
+    // --- Risk Owners ---
+    { firstName: 'Sarah', lastName: 'Johnson', username: 'sarah_it', email: 'sarah@riscover.com', role: UserRole.RISK_OWNER, department: 'IT' },
+    { firstName: 'Mike', lastName: 'Ross', username: 'mike_fin', email: 'mike@riscover.com', role: UserRole.RISK_OWNER, department: 'Finance' },
+    
+    // --- Security Analysts ---
+    { firstName: 'Ramy', lastName: 'Adel', username: 'ramy_sec', email: 'ramy@riscover.com', role: UserRole.SECURITY_ANALYST, department: 'Cybersecurity' }
   ];
 
-  // بنخزن اليوزرز اللي اتعملوا في Map عشان نستخدمهم تحت
   const usersMap: any = {};
-
-  for (const user of usersData) {
+  
+  for (const u of usersData) {
     try {
-      let existingUser: any = await usersService.findByUsername(user.username);
-      if (!existingUser) {
-        existingUser = await usersService.create(user as any);
-        console.log(`✅ Created User: ${user.username}`);
-      } else {
-        console.log(`⚠️ User Exists: ${user.username}`);
+      let user: any = await usersService.findByUsername(u.username);
+      if (!user) {
+        // Default password for everyone
+        user = await usersService.create({ ...u, password: '123' } as any);
+        console.log(`✅ User: ${u.username} (${u.role})`);
       }
-      usersMap[user.username] = existingUser;
-    } catch (error) {
-      console.error(`❌ Error creating ${user.username}:`, error.message);
-    }
+      usersMap[u.username] = user;
+    } catch (e) { console.log(`⚠️ User Skip: ${u.username}`); }
   }
 
   // ==========================================
-  // 2. زراعة الضوابط (Controls)
+  // 2. Controls Library (ISO & NIST)
   // ==========================================
-  console.log('\n🛡️ Seeding Controls...');
+  console.log('\n🛡️ Populating Controls Library...');
 
-  const controlsData = [
-    { code: 'ISO-A.12.1', name: 'Ops Procedures', type: ControlType.PREVENTIVE, description: 'Documented operating procedures' },
-    { code: 'PCI-FW-01', name: 'Firewall Config', type: ControlType.PREVENTIVE, description: 'Restrict inbound/outbound traffic' },
-    { code: 'NIST-ID-1', name: 'Asset Inventory', type: ControlType.DETECTIVE, description: 'Maintain inventory of systems' },
-    { code: 'DRP-01', name: 'Backup Recovery', type: ControlType.CORRECTIVE, description: 'Regular automated backups' }
+  const controls = [
+    { code: 'AC-3', name: 'Access Enforcement', type: ControlType.PREVENTIVE, description: 'Enforce approved authorizations for logical access.' },
+    { code: 'AU-2', name: 'Audit Events', type: ControlType.DETECTIVE, description: 'Determine that the information system is capable of auditing events.' },
+    { code: 'IR-4', name: 'Incident Handling', type: ControlType.CORRECTIVE, description: 'Implement an incident handling capability.' },
+    { code: 'ISO-A.12.3', name: 'Backup', type: ControlType.CORRECTIVE, description: 'Backup copies of information, software and system images.' },
+    { code: 'ISO-A.9.2', name: 'User Access Provisioning', type: ControlType.PREVENTIVE, description: 'Formal user registration and de-registration process.' },
+    { code: 'PCI-DSS-1', name: 'Firewall Config', type: ControlType.PREVENTIVE, description: 'Install and maintain a firewall configuration.' }
   ];
 
-  for (const control of controlsData) {
-    try {
-      await controlsService.create(control as any);
-      console.log(`✅ Control: ${control.code}`);
-    } catch (e) {
-      console.log(`⚠️ Skipped Control: ${control.code}`);
-    }
+  for (const c of controls) {
+    try { await controlsService.create(c as any); console.log(`✅ Control: ${c.code}`); } 
+    catch (e) {}
   }
 
   // ==========================================
-  // 3. زراعة المخاطر (Risks) - بالشكل الجديد
+  // 3. Risks Scenarios (Diverse Data)
   // ==========================================
-  console.log('\n🔥 Seeding Risks (with new fields)...');
+  console.log('\n🔥 Generating Risk Scenarios...');
 
-  const riskCreator = usersMap['ali_it']; // علي هو اللي هيسجل المخاطر
-
-  if (riskCreator) {
-    const risksData = [
-      {
-        title: 'Legacy Server Overheating',
-        description: 'Main DB server AC is failing intermittently.',
-        category: RiskCategory.OPERATIONAL,
-        impact: 5,
-        likelihood: 4,
-        // الحقول الجديدة
-        assetTags: ['Server', 'Data Center', 'Hardware'],
-        affectedSystem: 'Core Database Server',
+  const scenarios = [
+    // ----------------------------------------------------
+    // Scenario 1: Critical Security Risk (Ransomware)
+    // ----------------------------------------------------
+    {
+      creator: 'sarah_it',
+      data: {
+        title: 'Ransomware Attack Susceptibility',
+        description: 'Outdated server patches increasing vulnerability to ransomware attacks.',
+        category: RiskCategory.SECURITY,
+        affectedSystem: 'Core ERP & File Servers',
+        assetTags: ['Servers', 'Windows 2016', 'Data Center'],
+        impact: 5, likelihood: 5, // Score 25 (Critical)
+        
         riskOwnerEmail: 'hassan@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
+        
         priority: RiskPriority.CRITICAL,
         treatmentStrategy: RiskTreatment.MITIGATE,
-        remediationPlan: 'Replace AC units and install temperature sensors.',
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
-      },
-      {
-        title: 'Phishing Email Campaign',
-        description: 'Employees clicking on suspicious links.',
-        category: RiskCategory.SECURITY, // أو CYBERSECURITY حسب الـ Enum عندك
-        impact: 4,
-        likelihood: 5,
-        assetTags: ['Email', 'Endpoints', 'Employees'],
-        affectedSystem: 'Corporate Email',
+        remediationPlanDescription: 'Immediate patching of all servers and enable immutable backups.',
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString(),
+        
+        tasks: [
+          { title: 'Patch Windows Servers', assignee: 'IT Admin', status: 'In Progress', dueDate: '2025-10-01' },
+          { title: 'Configure Immutable Backups', assignee: 'Backup Team', status: 'Not Started', dueDate: '2025-10-05' }
+        ]
+      }
+    },
+    // ----------------------------------------------------
+    // Scenario 2: High Operational Risk (Cloud Outage)
+    // ----------------------------------------------------
+    {
+      creator: 'sarah_it',
+      data: {
+        title: 'Single Zone Cloud Failure',
+        description: 'Application is hosted in a single AWS availability zone.',
+        category: RiskCategory.OPERATIONAL,
+        affectedSystem: 'Customer Portal',
+        assetTags: ['AWS', 'Cloud', 'Hosting'],
+        impact: 5, likelihood: 3, // Score 15 (High)
+        
         riskOwnerEmail: 'hassan@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
+        
         priority: RiskPriority.HIGH,
         treatmentStrategy: RiskTreatment.MITIGATE,
-        remediationPlan: 'Conduct monthly phishing simulation.',
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)).toISOString()
-      },
-      {
-        title: 'GDPR Non-Compliance',
-        description: 'Customer data retention policy not enforced.',
-        category: RiskCategory.COMPLIANCE,
-        impact: 5,
-        likelihood: 2,
-        assetTags: ['Policy', 'Customer Data'],
-        affectedSystem: 'CRM System',
-        riskOwnerEmail: 'mona@riscover.com',
-        securityAnalystEmail: 'sara@riscover.com',
-        priority: RiskPriority.MEDIUM,
-        treatmentStrategy: RiskTreatment.ACCEPT, // نجرب واحدة Accept
-        remediationPlan: 'Review legal requirements.',
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString()
+        remediationPlanDescription: 'Architect Multi-AZ deployment.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)).toISOString(),
+        tasks: []
       }
-    ];
-
-    for (const riskData of risksData) {
-      try {
-        // محاكاة اليوزر (req.user)
-        const mockUser = { 
-            userId: riskCreator._id, 
-            department: riskCreator.department,
-            email: riskCreator.email 
-        };
-
-        const newRisk = await risksService.create(riskData as any, mockUser);
-        console.log(`✅ Risk Created: ${newRisk.siNo} - ${newRisk.title} (Score: ${newRisk.score})`);
-
-      } catch (e) {
-        // بنتجاهل الخطأ لو الخطر موجود (بسبب Unique siNo أحياناً لو العداد متصفرش)
-        // بس الطبيعي في الـ Seed إنه يكمل
-        console.log(`⚠️ Risk Creation Info: ${e.message}`);
+    },
+    // ----------------------------------------------------
+    // Scenario 3: Medium Financial Risk (Reporting)
+    // ----------------------------------------------------
+    {
+      creator: 'mike_fin',
+      data: {
+        title: 'Financial Reporting Errors',
+        description: 'Manual entry in spreadsheets causes quarterly errors.',
+        category: RiskCategory.FINANCIAL,
+        affectedSystem: 'Excel Sheets',
+        assetTags: ['Finance', 'Reporting'],
+        impact: 4, likelihood: 3, // Score 12 (High/Medium)
+        
+        riskOwnerEmail: 'khaled@riscover.com',
+        securityAnalystEmail: 'ramy@riscover.com',
+        
+        priority: RiskPriority.MEDIUM,
+        treatmentStrategy: RiskTreatment.MITIGATE,
+        remediationPlanDescription: 'Implement automated GL software.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString(),
+        
+        tasks: [
+          { title: 'Select Vendor', assignee: 'Mike Ross', status: 'Completed', dueDate: '2025-01-01' },
+          { title: 'Data Migration', assignee: 'IT Team', status: 'In Progress', dueDate: '2025-03-01' }
+        ]
+      }
+    },
+    // ----------------------------------------------------
+    // Scenario 4: Compliance Risk (Accepted)
+    // ----------------------------------------------------
+    {
+      creator: 'sarah_it',
+      data: {
+        title: 'Legacy App Non-Compliance',
+        description: 'Old HR system does not support MFA (Multi-Factor Auth).',
+        category: RiskCategory.COMPLIANCE,
+        affectedSystem: 'Legacy HR Portal',
+        assetTags: ['Legacy', 'HR'],
+        impact: 3, likelihood: 2, // Score 6 (Medium)
+        
+        riskOwnerEmail: 'mona@riscover.com',
+        securityAnalystEmail: 'ramy@riscover.com',
+        
+        priority: RiskPriority.MEDIUM,
+        treatmentStrategy: RiskTreatment.ACCEPT, // Accepted Risk
+        remediationPlanDescription: 'Risk accepted due to system retirement in 6 months.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString(),
+        tasks: []
+      }
+    },
+     // ----------------------------------------------------
+    // Scenario 5: Low Risk (Draft)
+    // ----------------------------------------------------
+    {
+      creator: 'mike_fin',
+      data: {
+        title: 'Minor Budget Variance',
+        description: 'Travel expenses exceeding budget by 5%.',
+        category: RiskCategory.FINANCIAL,
+        affectedSystem: 'Budgeting',
+        assetTags: ['Expenses'],
+        impact: 2, likelihood: 2, // Score 4 (Low)
+        
+        riskOwnerEmail: 'khaled@riscover.com',
+        securityAnalystEmail: 'ramy@riscover.com',
+        
+        priority: RiskPriority.LOW,
+        treatmentStrategy: RiskTreatment.AVOID,
+        remediationPlanDescription: 'Update travel policy.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
+        tasks: []
       }
     }
-  } else {
-    console.log('❌ Error: Risk Creator (ali_it) not found.');
+  ];
+
+  for (const scenario of scenarios) {
+    const creatorUser = usersMap[scenario.creator];
+    if (creatorUser) {
+      try {
+        const mockUser = { 
+            userId: creatorUser._id, 
+            department: creatorUser.department, 
+            email: creatorUser.email 
+        };
+        
+        const r = await risksService.create(scenario.data as any, mockUser);
+        
+        // *Bonus Logic*: لو الخطر Accepted في الداتا، نغير حالته في الداتابيز عشان يظهر في الداشبورد صح
+        if (scenario.data.treatmentStrategy === RiskTreatment.ACCEPT) {
+            // محاكاة موافقة المدير
+             await risksService.updateStatus((r as any)._id.toString(), { 
+                 status: RiskStatus.ACCEPTED, 
+                 justification: 'Approved via Seed Script' 
+             }, { userId: usersMap['admin']._id, role: UserRole.ADMIN }); // Admin approves for seed
+             console.log(`✅ Risk Created & ACCEPTED: ${r.siNo}`);
+        } else {
+             console.log(`✅ Risk Created: ${r.siNo} - ${r.title} (${r.priority})`);
+        }
+
+      } catch (e) { console.log(`Error creating risk: ${e.message}`); }
+    }
   }
 
-  console.log('\n🌳 Seeding Complete!');
+  console.log('\n🌳 Mega Seeding Complete! Dashboard is ready.');
   await app.close();
 }
 

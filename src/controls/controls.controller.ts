@@ -1,34 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { ControlsService } from './controls.service';
-import { CreateControlDto } from './dto/create-control.dto';
-import { UpdateControlDto } from './dto/update-control.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Controls')
 @Controller('controls')
 export class ControlsController {
   constructor(private readonly controlsService: ControlsService) {}
 
   @Post()
-  create(@Body() createControlDto: CreateControlDto) {
-    return this.controlsService.create(createControlDto);
+  create(@Body() createDto: any) {
+    return this.controlsService.create(createDto);
   }
 
   @Get()
-  findAll() {
-    return this.controlsService.findAll();
-  }
+  findAll() { return this.controlsService.findAll(); }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.controlsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateControlDto: UpdateControlDto) {
-    return this.controlsService.update(+id, updateControlDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.controlsService.remove(+id);
-  }
+  findOne(@Param('id') id: string) { return this.controlsService.findOne(id); }
 }

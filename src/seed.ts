@@ -3,10 +3,12 @@ import { AppModule } from './app.module';
 import { UsersService } from './users/users.service';
 import { ControlsService } from './controls/controls.service';
 import { RisksService } from './risks/risks.service';
+import { ComplianceService } from './compliance/compliance.service';
 
-// Enums
+// Enums imports
 import { UserRole } from './users/entities/user.entity';
 import { ControlType } from './controls/enums/control-type.enum';
+import { ControlStatus } from './controls/enums/control-status.enum';
 import { RiskCategory } from './risks/enums/risk-category.enum';
 import { RiskPriority } from './risks/enums/risk-priority.enum';
 import { RiskTreatment } from './risks/enums/risk-treatment.enum';
@@ -18,28 +20,29 @@ async function bootstrap() {
   const usersService = app.get(UsersService);
   const controlsService = app.get(ControlsService);
   const risksService = app.get(RisksService);
+  const complianceService = app.get(ComplianceService);
 
-  console.log('🚀 Starting "Mega" Seeding...\n');
+  console.log('🚀 Starting ULTIMATE GRC Seeding...\n');
 
   // ==========================================
-  // 1. Users (Team Roster)
+  // 1. Users (The Team) 👤
   // ==========================================
-  console.log('👤 Creating Team Members...');
+  console.log('👤 Creating Users...');
   
   const usersData = [
-    // --- Management ---
+    // Admin & Board
     { firstName: 'Admin', lastName: 'System', username: 'admin', email: 'admin@riscover.com', role: UserRole.ADMIN, department: 'Board' },
     
-    // --- Business Unit Heads ---
+    // Business Unit Heads (Approvers)
     { firstName: 'Hassan', lastName: 'El-Sayed', username: 'head_it', email: 'hassan@riscover.com', role: UserRole.BU_HEAD, department: 'IT' },
     { firstName: 'Mona', lastName: 'Zaki', username: 'head_hr', email: 'mona@riscover.com', role: UserRole.BU_HEAD, department: 'HR' },
     { firstName: 'Khaled', lastName: 'Salem', username: 'head_fin', email: 'khaled@riscover.com', role: UserRole.BU_HEAD, department: 'Finance' },
 
-    // --- Risk Owners ---
+    // Risk Owners (Creators)
     { firstName: 'Sarah', lastName: 'Johnson', username: 'sarah_it', email: 'sarah@riscover.com', role: UserRole.RISK_OWNER, department: 'IT' },
     { firstName: 'Mike', lastName: 'Ross', username: 'mike_fin', email: 'mike@riscover.com', role: UserRole.RISK_OWNER, department: 'Finance' },
     
-    // --- Security Analysts ---
+    // Security Analyst
     { firstName: 'Ramy', lastName: 'Adel', username: 'ramy_sec', email: 'ramy@riscover.com', role: UserRole.SECURITY_ANALYST, department: 'Cybersecurity' }
   ];
 
@@ -49,26 +52,81 @@ async function bootstrap() {
     try {
       let user: any = await usersService.findByUsername(u.username);
       if (!user) {
-        // Default password for everyone
-        user = await usersService.create({ ...u, password: '123' } as any);
-        console.log(`✅ User: ${u.username} (${u.role})`);
+        user = await usersService.create({ ...u, password: '123' } as any); // Password for everyone
+        console.log(`✅ User Created: ${u.username}`);
       }
       usersMap[u.username] = user;
     } catch (e) { console.log(`⚠️ User Skip: ${u.username}`); }
   }
 
   // ==========================================
-  // 2. Controls Library (ISO & NIST)
+  // 2. Compliance Frameworks 📊
   // ==========================================
-  console.log('\n🛡️ Populating Controls Library...');
+  console.log('\n📊 Creating Frameworks...');
+
+  const frameworks = [
+    { name: 'ISO 27001', description: 'Information Security Management System', type: 'Security' },
+    { name: 'PCI DSS', description: 'Payment Card Industry Security Standard', type: 'Financial' },
+    { name: 'GDPR', description: 'General Data Protection Regulation', type: 'Privacy' },
+    { name: 'SOC 2', description: 'Service Organization Control 2', type: 'Security' }
+  ];
+
+  for (const fw of frameworks) {
+    try { await complianceService.create(fw); console.log(`✅ Framework: ${fw.name}`); } 
+    catch (e) {}
+  }
+
+  // ==========================================
+  // 3. Controls Library (Mixed Statuses) 🛡️
+  // ==========================================
+  console.log('\n🛡️ Creating Controls...');
 
   const controls = [
-    { code: 'AC-3', name: 'Access Enforcement', type: ControlType.PREVENTIVE, description: 'Enforce approved authorizations for logical access.' },
-    { code: 'AU-2', name: 'Audit Events', type: ControlType.DETECTIVE, description: 'Determine that the information system is capable of auditing events.' },
-    { code: 'IR-4', name: 'Incident Handling', type: ControlType.CORRECTIVE, description: 'Implement an incident handling capability.' },
-    { code: 'ISO-A.12.3', name: 'Backup', type: ControlType.CORRECTIVE, description: 'Backup copies of information, software and system images.' },
-    { code: 'ISO-A.9.2', name: 'User Access Provisioning', type: ControlType.PREVENTIVE, description: 'Formal user registration and de-registration process.' },
-    { code: 'PCI-DSS-1', name: 'Firewall Config', type: ControlType.PREVENTIVE, description: 'Install and maintain a firewall configuration.' }
+    // --- ISO 27001 (Mix of Implemented & In Progress) ---
+    { 
+      code: 'A.8.1.1', name: 'Inventory of Assets', framework: 'ISO 27001', 
+      status: ControlStatus.IMPLEMENTED, type: ControlType.PREVENTIVE, 
+      description: 'Assets associated with information... identified.' 
+    },
+    { 
+      code: 'A.12.3', name: 'Backup', framework: 'ISO 27001', 
+      status: ControlStatus.IMPLEMENTED, type: ControlType.CORRECTIVE, 
+      description: 'Backup copies of information... shall be taken.' 
+    },
+    { 
+      code: 'A.9.2', name: 'User Access Provisioning', framework: 'ISO 27001', 
+      status: ControlStatus.IN_PROGRESS, type: ControlType.PREVENTIVE, 
+      description: 'Formal user registration process.' 
+    },
+    { 
+      code: 'A.16.1', name: 'Incident Management', framework: 'ISO 27001', 
+      status: ControlStatus.NOT_STARTED, type: ControlType.CORRECTIVE, 
+      description: 'Management of information security incidents.' 
+    },
+
+    // --- PCI DSS (Mostly Implemented) ---
+    { 
+      code: 'PCI-1.1', name: 'Firewall Config', framework: 'PCI DSS', 
+      status: ControlStatus.IMPLEMENTED, type: ControlType.PREVENTIVE, 
+      description: 'Install and maintain a firewall configuration.' 
+    },
+    { 
+      code: 'PCI-3.1', name: 'Protect Card Data', framework: 'PCI DSS', 
+      status: ControlStatus.IMPLEMENTED, type: ControlType.PREVENTIVE, 
+      description: 'Protect stored cardholder data.' 
+    },
+
+    // --- GDPR (Poor Compliance) ---
+    { 
+      code: 'GDPR-Art-32', name: 'Security of Processing', framework: 'GDPR', 
+      status: ControlStatus.NOT_STARTED, type: ControlType.DETECTIVE, 
+      description: 'Implement technical and organisational measures.' 
+    },
+    { 
+      code: 'GDPR-Art-17', name: 'Right to Erasure', framework: 'GDPR', 
+      status: ControlStatus.IN_PROGRESS, type: ControlType.CORRECTIVE, 
+      description: 'The right to be forgotten.' 
+    }
   ];
 
   for (const c of controls) {
@@ -77,131 +135,133 @@ async function bootstrap() {
   }
 
   // ==========================================
-  // 3. Risks Scenarios (Diverse Data)
+  // 4. Risks Scenarios (The Big Part) 🔥
   // ==========================================
-  console.log('\n🔥 Generating Risk Scenarios...');
+  console.log('\n🔥 Creating Risk Scenarios...');
 
   const scenarios = [
-    // ----------------------------------------------------
-    // Scenario 1: Critical Security Risk (Ransomware)
-    // ----------------------------------------------------
+    // 1. Critical Security Risk (With Tasks)
     {
       creator: 'sarah_it',
       data: {
         title: 'Ransomware Attack Susceptibility',
-        description: 'Outdated server patches increasing vulnerability to ransomware attacks.',
+        description: 'Vulnerability in legacy Windows 2012 servers.',
         category: RiskCategory.SECURITY,
-        affectedSystem: 'Core ERP & File Servers',
-        assetTags: ['Servers', 'Windows 2016', 'Data Center'],
+        affectedSystem: 'Core ERP',
+        assetTags: ['Servers', 'Windows 2012', 'Data Center'],
         impact: 5, likelihood: 5, // Score 25 (Critical)
         
         riskOwnerEmail: 'hassan@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
-        
         priority: RiskPriority.CRITICAL,
         treatmentStrategy: RiskTreatment.MITIGATE,
-        remediationPlanDescription: 'Immediate patching of all servers and enable immutable backups.',
-        dueDate: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString(),
-        
+        remediationPlanDescription: 'Decommission legacy servers and migrate to Cloud.',
+        dueDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
         tasks: [
-          { title: 'Patch Windows Servers', assignee: 'IT Admin', status: 'In Progress', dueDate: '2025-10-01' },
-          { title: 'Configure Immutable Backups', assignee: 'Backup Team', status: 'Not Started', dueDate: '2025-10-05' }
+          { title: 'Server Audit', assignee: 'SysAdmin', status: 'Completed', dueDate: '2025-09-01' },
+          { title: 'Migration Plan', assignee: 'Cloud Team', status: 'In Progress', dueDate: '2025-10-01' }
         ]
       }
     },
-    // ----------------------------------------------------
-    // Scenario 2: High Operational Risk (Cloud Outage)
-    // ----------------------------------------------------
+    // 2. High Operational Risk
     {
       creator: 'sarah_it',
       data: {
-        title: 'Single Zone Cloud Failure',
-        description: 'Application is hosted in a single AWS availability zone.',
+        title: 'Cloud Service Outage (Single AZ)',
+        description: 'No redundancy for the main application database.',
         category: RiskCategory.OPERATIONAL,
         affectedSystem: 'Customer Portal',
-        assetTags: ['AWS', 'Cloud', 'Hosting'],
+        assetTags: ['AWS', 'RDS', 'Database'],
         impact: 5, likelihood: 3, // Score 15 (High)
         
         riskOwnerEmail: 'hassan@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
-        
         priority: RiskPriority.HIGH,
         treatmentStrategy: RiskTreatment.MITIGATE,
-        remediationPlanDescription: 'Architect Multi-AZ deployment.',
+        remediationPlanDescription: 'Enable Multi-AZ deployment.',
         dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)).toISOString(),
         tasks: []
       }
     },
-    // ----------------------------------------------------
-    // Scenario 3: Medium Financial Risk (Reporting)
-    // ----------------------------------------------------
+    // 3. Medium Financial Risk
     {
       creator: 'mike_fin',
       data: {
-        title: 'Financial Reporting Errors',
-        description: 'Manual entry in spreadsheets causes quarterly errors.',
+        title: 'Manual Reporting Errors',
+        description: 'Excel-based reporting leads to data integrity issues.',
         category: RiskCategory.FINANCIAL,
-        affectedSystem: 'Excel Sheets',
-        assetTags: ['Finance', 'Reporting'],
-        impact: 4, likelihood: 3, // Score 12 (High/Medium)
+        affectedSystem: 'Financial Reports',
+        assetTags: ['Excel', 'Finance'],
+        impact: 4, likelihood: 3, // Score 12 (Medium/High)
         
         riskOwnerEmail: 'khaled@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
-        
         priority: RiskPriority.MEDIUM,
         treatmentStrategy: RiskTreatment.MITIGATE,
-        remediationPlanDescription: 'Implement automated GL software.',
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString(),
-        
+        remediationPlanDescription: 'Purchase automated reporting tool.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 4)).toISOString(),
         tasks: [
-          { title: 'Select Vendor', assignee: 'Mike Ross', status: 'Completed', dueDate: '2025-01-01' },
-          { title: 'Data Migration', assignee: 'IT Team', status: 'In Progress', dueDate: '2025-03-01' }
+          { title: 'Vendor Selection', assignee: 'Mike Ross', status: 'Not Started', dueDate: '2025-12-01' }
         ]
       }
     },
-    // ----------------------------------------------------
-    // Scenario 4: Compliance Risk (Accepted)
-    // ----------------------------------------------------
+    // 4. Accepted Risk (Compliance)
     {
       creator: 'sarah_it',
       data: {
-        title: 'Legacy App Non-Compliance',
-        description: 'Old HR system does not support MFA (Multi-Factor Auth).',
+        title: 'Legacy App MFA Non-Compliance',
+        description: 'Old HR system cannot support MFA.',
         category: RiskCategory.COMPLIANCE,
-        affectedSystem: 'Legacy HR Portal',
-        assetTags: ['Legacy', 'HR'],
+        affectedSystem: 'HR Legacy Portal',
+        assetTags: ['HR', 'Legacy'],
         impact: 3, likelihood: 2, // Score 6 (Medium)
         
         riskOwnerEmail: 'mona@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
-        
         priority: RiskPriority.MEDIUM,
-        treatmentStrategy: RiskTreatment.ACCEPT, // Accepted Risk
-        remediationPlanDescription: 'Risk accepted due to system retirement in 6 months.',
+        treatmentStrategy: RiskTreatment.ACCEPT, // ACCEPTED
+        remediationPlanDescription: 'Risk accepted as system retires in Q4.',
         dueDate: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString(),
         tasks: []
       }
     },
-     // ----------------------------------------------------
-    // Scenario 5: Low Risk (Draft)
-    // ----------------------------------------------------
+    // 5. Low Risk (Avoid)
     {
       creator: 'mike_fin',
       data: {
-        title: 'Minor Budget Variance',
-        description: 'Travel expenses exceeding budget by 5%.',
+        title: 'Minor Travel Budget Variance',
+        description: 'Potential 5% overspend on travel.',
         category: RiskCategory.FINANCIAL,
         affectedSystem: 'Budgeting',
-        assetTags: ['Expenses'],
+        assetTags: ['Travel'],
         impact: 2, likelihood: 2, // Score 4 (Low)
         
         riskOwnerEmail: 'khaled@riscover.com',
         securityAnalystEmail: 'ramy@riscover.com',
-        
         priority: RiskPriority.LOW,
         treatmentStrategy: RiskTreatment.AVOID,
-        remediationPlanDescription: 'Update travel policy.',
+        remediationPlanDescription: 'Cancel non-essential travel.',
         dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
+        tasks: []
+      }
+    },
+    // 6. Data Privacy Risk (GDPR)
+    {
+      creator: 'sarah_it',
+      data: {
+        title: 'Customer Data Retention Breach',
+        description: 'Data kept longer than 5 years without justification.',
+        category: RiskCategory.COMPLIANCE,
+        affectedSystem: 'CRM',
+        assetTags: ['Customer Data', 'GDPR'],
+        impact: 5, likelihood: 2, // Score 10 (Medium)
+        
+        riskOwnerEmail: 'mona@riscover.com',
+        securityAnalystEmail: 'ramy@riscover.com',
+        priority: RiskPriority.HIGH,
+        treatmentStrategy: RiskTreatment.MITIGATE,
+        remediationPlanDescription: 'Run deletion scripts.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)).toISOString(),
         tasks: []
       }
     }
@@ -219,23 +279,22 @@ async function bootstrap() {
         
         const r = await risksService.create(scenario.data as any, mockUser);
         
-        // *Bonus Logic*: لو الخطر Accepted في الداتا، نغير حالته في الداتابيز عشان يظهر في الداشبورد صح
+        // Handle ACCEPTED Risks (Auto-approve by Admin)
         if (scenario.data.treatmentStrategy === RiskTreatment.ACCEPT) {
-            // محاكاة موافقة المدير
              await risksService.updateStatus((r as any)._id.toString(), { 
                  status: RiskStatus.ACCEPTED, 
                  justification: 'Approved via Seed Script' 
-             }, { userId: usersMap['admin']._id, role: UserRole.ADMIN }); // Admin approves for seed
+             }, { userId: usersMap['admin']._id, role: UserRole.ADMIN });
              console.log(`✅ Risk Created & ACCEPTED: ${r.siNo}`);
         } else {
-             console.log(`✅ Risk Created: ${r.siNo} - ${r.title} (${r.priority})`);
+             console.log(`✅ Risk Created: ${r.siNo} (${r.priority})`);
         }
 
       } catch (e) { console.log(`Error creating risk: ${e.message}`); }
     }
   }
 
-  console.log('\n🌳 Mega Seeding Complete! Dashboard is ready.');
+  console.log('\n🌳 ULTIMATE Seeding Complete!');
   await app.close();
 }
 

@@ -1,26 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { CreateControlDto } from './dto/create-control.dto';
-import { UpdateControlDto } from './dto/update-control.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Control } from './entities/control.entity';
 
 @Injectable()
 export class ControlsService {
-  create(createControlDto: CreateControlDto) {
-    return 'This action adds a new control';
+  constructor(@InjectModel(Control.name) private controlModel: Model<Control>) {}
+
+  async create(createControlDto: any) {
+    return this.controlModel.create(createControlDto);
   }
 
-  findAll() {
-    return `This action returns all controls`;
+  async findAll() {
+    return this.controlModel.find().exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} control`;
-  }
-
-  update(id: number, updateControlDto: UpdateControlDto) {
-    return `This action updates a #${id} control`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} control`;
+  async findOne(id: string) {
+    return this.controlModel.findById(id).exec();
   }
 }

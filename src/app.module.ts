@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
 import { RisksModule } from './risks/risks.module';
 import { ControlsModule } from './controls/controls.module';
+import { ComplianceModule } from './compliance/compliance.module';
 
 @Module({
   imports: [
@@ -35,6 +36,8 @@ import { ControlsModule } from './controls/controls.module';
     RisksModule,
 
     ControlsModule,
+
+    ComplianceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

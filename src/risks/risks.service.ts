@@ -7,6 +7,7 @@ import { Risk } from './entities/risk.entity';
 import { CommonService } from '../common/common.service';
 import { UserRole } from '../users/entities/user.entity';
 import { RiskStatus } from './enums/risk-status.enum';
+import { FilterRiskDto } from './dto/filter-risk.dto';
 
 @Injectable()
 export class RisksService {
@@ -99,6 +100,47 @@ export class RisksService {
       .populate('controls') // عشان يظهر تفاصيل الضوابط لو موجودة
       .populate('timeline.user', 'firstName lastName') // عشان يظهر اسم اللي عمل الكومنت
       .exec();
+  }
+
+  async findAllForDashboard(filters: FilterRiskDto): Promise<Risk[]> {
+  const query: any = {};
+
+  // 1. تصفية بالحالة
+  if (filters.status) {
+    query.status = filters.status;
+  }
+
+  // 2. تصفية بالمالك
+  if (filters.ownerId) {
+    query.owner = filters.ownerId;
+  }
+
+  // 3. تصفية بالسكور (أكبر من أو يساوي)
+  if (filters.minScore) {
+    query.score = { $gte: filters.minScore };
+  }
+
+  // 4. تصفية بالتاريخ (Identified Date)
+  if (filters.startDate || filters.endDate) {
+    query.identifiedDate = {};
+    if (filters.startDate) query.identifiedDate.$gte = new Date(filters.startDate);
+    if (filters.endDate) query.identifiedDate.$lte = new Date(filters.endDate);
+  }
+
+  // 5. بحث بالكلمة (في العنوان أو الوصف)
+  if (filters.search) {
+    query.$or = [
+      { title: { $regex: filters.search, $options: 'i' } }, // i = case insensitive
+      { description: { $regex: filters.search, $options: 'i' } }
+    ];
+  }
+
+  // تنفيذ الاستعلام
+  return this.riskModel.find(query)
+    .populate('owner', 'firstName lastName department') // هات بيانات المالك
+    .populate('controls', 'code name') // هات بيانات الضوابط
+    .sort({ createdAt: -1 }) // الأحدث أولاً
+    .exec();
   }
 
   async getNextId(): Promise<{ nextId: string }> {

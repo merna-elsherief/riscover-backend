@@ -16,6 +16,8 @@ import { CreateRiskDto } from './dto/create-risk.dto';
 import { UpdateRiskStatusDto } from './dto/update-risk-status.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { Query } from '@nestjs/common'; // استيراد Query
+import { FilterRiskDto } from './dto/filter-risk.dto';
 
 @ApiTags('Risks') // 1. قسم خاص للمخاطر في Swagger
 @ApiBearerAuth()  // 2. علامة القفل (يتطلب Token)
@@ -38,6 +40,12 @@ export class RisksController {
   findAll() {
     return this.risksService.findAll();
   }
+
+  @Get('dashboard')
+@ApiOperation({ summary: 'Get all risks with filters' })
+findAllForDashboard(@Query() filterDto: FilterRiskDto) { // @Query بياخد اللي بعد علامة ؟
+  return this.risksService.findAllForDashboard(filterDto);
+}
 
   // 🆕 دالة جلب الرقم القادم (لازم تتحط قبل @Get(':id'))
 @Get('next-id')

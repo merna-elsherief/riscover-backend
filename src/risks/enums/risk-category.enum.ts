@@ -1,8 +1,7 @@
 export enum RiskCategory {
+  SECURITY = 'Security',
   OPERATIONAL = 'Operational',
   FINANCIAL = 'Financial',
-  STRATEGIC = 'Strategic',
   COMPLIANCE = 'Compliance',
-  CYBERSECURITY = 'Cybersecurity',
-  REPUTATIONAL = 'Reputational'
+  STRATEGIC = 'Strategic'
 }

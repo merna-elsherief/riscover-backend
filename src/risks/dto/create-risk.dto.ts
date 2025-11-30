@@ -1,60 +1,88 @@
-import { IsString, IsNotEmpty, IsInt, Min, Max, IsDateString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsArray, IsEnum, IsEmail, IsBoolean, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+// استيراد الـ Enums
 import { RiskCategory } from '../enums/risk-category.enum';
-import { RiskTreatment } from '../enums/risk-treatment.enum'; // 1. استيراد
+import { RiskPriority } from '../enums/risk-priority.enum';
+import { RiskTreatment } from '../enums/risk-treatment.enum';
 
 export class CreateRiskDto {
-  @ApiProperty({ example: 'Server Room Overheating', description: 'Risk Title' })
+  // Risk Identification
+  @ApiProperty({ example: 'Phishing Attack' })
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: 'AC units are old and failing...', description: 'Full Description' })
+  @ApiProperty({ example: 'Description of the risk...' })
   @IsString()
   @IsNotEmpty()
   description: string;
 
-  @ApiProperty({ enum: RiskCategory, example: RiskCategory.OPERATIONAL })
-  @IsOptional()
+  @ApiProperty({ enum: RiskCategory })
   @IsEnum(RiskCategory)
-  category?: RiskCategory;
+  category: RiskCategory;
 
-  // التواريخ الجديدة
-  @ApiProperty({ example: '2023-11-01T00:00:00.000Z', required: false })
+  // Assets
+  @ApiProperty({ example: ['Server', 'Database'], isArray: true })
   @IsOptional()
-  @IsDateString()
-  identifiedDate?: string;
+  @IsArray()
+  @IsString({ each: true })
+  assetTags?: string[];
 
-  @ApiProperty({ example: '2023-12-31T00:00:00.000Z', required: false })
-  @IsOptional()
-  @IsDateString()
-  dueDate?: string;
-
-  @ApiProperty({ 
-    enum: RiskTreatment, 
-    example: RiskTreatment.MITIGATE, 
-    required: false,
-    description: 'Default is Mitigate if not provided' 
-  })
-  @IsOptional()
-  @IsEnum(RiskTreatment)
-  treatmentStrategy?: RiskTreatment;
-
-  @ApiProperty({ example: 'Payment Gateway', description: 'The system or asset at risk' })
+  @ApiProperty({ example: 'ERP System' })
   @IsString()
   @IsNotEmpty()
   affectedSystem: string;
 
-  // الأرقام
+  // People (Emails) 📧
+  @ApiProperty({ example: 'owner@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  riskOwnerEmail: string;
+
+  @ApiProperty({ example: 'analyst@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  securityAnalystEmail: string;
+
+  // Scoring
   @ApiProperty({ example: 4, minimum: 1, maximum: 5 })
-  @IsInt()
-  @Min(1)
-  @Max(5)
+  @IsInt() @Min(1) @Max(5)
+  impact: number;
+
+  @ApiProperty({ example: 3, minimum: 1, maximum: 5 })
+  @IsInt() @Min(1) @Max(5)
   likelihood: number;
 
-  @ApiProperty({ example: 5, minimum: 1, maximum: 5 })
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  impact: number;
+  // Priority & Treatment
+  @ApiProperty({ enum: RiskPriority })
+  @IsOptional()
+  @IsEnum(RiskPriority)
+  priority?: RiskPriority;
+
+  @ApiProperty({ enum: RiskTreatment })
+  @IsOptional()
+  @IsEnum(RiskTreatment)
+  treatmentStrategy?: RiskTreatment;
+
+  // Remediation
+  @ApiProperty({ required: false })
+  @IsOptional() @IsString()
+  remediationPlan?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional() @IsString()
+  remediationPlanSummary?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional() @IsString()
+  resourcesRequired?: string;
+
+  @ApiProperty({ example: true })
+  @IsOptional() @IsBoolean()
+  automaticReminders?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional() @IsDateString()
+  dueDate?: string;
 }

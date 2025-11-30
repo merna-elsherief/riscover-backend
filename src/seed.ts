@@ -4,10 +4,12 @@ import { UsersService } from './users/users.service';
 import { ControlsService } from './controls/controls.service';
 import { RisksService } from './risks/risks.service';
 
-// استيراد الـ Enums
+// استيراد الـ Enums (تأكدي من المسارات)
 import { UserRole } from './users/entities/user.entity';
 import { ControlType } from './controls/enums/control-type.enum';
 import { RiskCategory } from './risks/enums/risk-category.enum';
+import { RiskPriority } from './risks/enums/risk-priority.enum';
+import { RiskTreatment } from './risks/enums/risk-treatment.enum';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -49,26 +51,28 @@ async function bootstrap() {
       firstName: 'Sara', lastName: 'Compliance', username: 'sara_comp',
       email: 'sara@riscover.com', password: '123',
       role: UserRole.COMPLIANCE_MANAGER, department: 'Risk Dept'
+    },
+    // يوزر جديد عشان نستخدمه كمحلل أمني
+    {
+      firstName: 'Ramy', lastName: 'Analyst', username: 'ramy_sec',
+      email: 'ramy@riscover.com', password: '123',
+      role: UserRole.SECURITY_ANALYST, department: 'Cybersecurity'
     }
   ];
 
-  // بنخزن اليوزرز اللي اتعملوا عشان نستخدمهم في المخاطر
-  const createdUsers: any = {};
+  // بنخزن اليوزرز اللي اتعملوا في Map عشان نستخدمهم تحت
+  const usersMap: any = {};
 
   for (const user of usersData) {
     try {
-      // بنحاول نجيب اليوزر الأول لو موجود
-      let existingUser : any = await usersService.findByUsername(user.username);
-      
+      let existingUser: any = await usersService.findByUsername(user.username);
       if (!existingUser) {
-        // لو مش موجود نكريته
         existingUser = await usersService.create(user as any);
-        console.log(`✅ Created: ${user.username}`);
+        console.log(`✅ Created User: ${user.username}`);
       } else {
-        console.log(`⚠️ Exists: ${user.username}`);
+        console.log(`⚠️ User Exists: ${user.username}`);
       }
-      createdUsers[user.username] = existingUser;
-
+      usersMap[user.username] = existingUser;
     } catch (error) {
       console.error(`❌ Error creating ${user.username}:`, error.message);
     }
@@ -80,22 +84,10 @@ async function bootstrap() {
   console.log('\n🛡️ Seeding Controls...');
 
   const controlsData = [
-    {
-      code: 'ISO-A.12.1', name: 'Ops Procedures', type: ControlType.PREVENTIVE,
-      description: 'Documented operating procedures'
-    },
-    {
-      code: 'PCI-FW-01', name: 'Firewall Config', type: ControlType.PREVENTIVE,
-      description: 'Restrict inbound and outbound traffic'
-    },
-    {
-      code: 'NIST-ID-1', name: 'Asset Inventory', type: ControlType.DETECTIVE,
-      description: 'Maintain inventory of all systems'
-    },
-    {
-      code: 'DRP-01', name: 'Backup Recovery', type: ControlType.CORRECTIVE,
-      description: 'Regular automated backups'
-    }
+    { code: 'ISO-A.12.1', name: 'Ops Procedures', type: ControlType.PREVENTIVE, description: 'Documented operating procedures' },
+    { code: 'PCI-FW-01', name: 'Firewall Config', type: ControlType.PREVENTIVE, description: 'Restrict inbound/outbound traffic' },
+    { code: 'NIST-ID-1', name: 'Asset Inventory', type: ControlType.DETECTIVE, description: 'Maintain inventory of systems' },
+    { code: 'DRP-01', name: 'Backup Recovery', type: ControlType.CORRECTIVE, description: 'Regular automated backups' }
   ];
 
   for (const control of controlsData) {
@@ -108,54 +100,82 @@ async function bootstrap() {
   }
 
   // ==========================================
-  // 3. زراعة المخاطر (Risks)
+  // 3. زراعة المخاطر (Risks) - بالشكل الجديد
   // ==========================================
-  console.log('\n🔥 Seeding Initial Risks...');
+  console.log('\n🔥 Seeding Risks (with new fields)...');
 
-  const riskOwner = createdUsers['ali_it']; // علي هو اللي هيعمل المخاطر
+  const riskCreator = usersMap['ali_it']; // علي هو اللي هيسجل المخاطر
 
-  if (riskOwner) {
+  if (riskCreator) {
     const risksData = [
       {
-        title: 'Server Room Overheating',
-        description: 'AC units are old and might fail during summer.',
+        title: 'Legacy Server Overheating',
+        description: 'Main DB server AC is failing intermittently.',
         category: RiskCategory.OPERATIONAL,
-        likelihood: 4,
         impact: 5,
-        identifiedDate: new Date().toISOString(), // تاريخ النهاردة
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString() // كمان شهر
+        likelihood: 4,
+        // الحقول الجديدة
+        assetTags: ['Server', 'Data Center', 'Hardware'],
+        affectedSystem: 'Core Database Server',
+        riskOwnerEmail: 'hassan@riscover.com',
+        securityAnalystEmail: 'ramy@riscover.com',
+        priority: RiskPriority.CRITICAL,
+        treatmentStrategy: RiskTreatment.MITIGATE,
+        remediationPlan: 'Replace AC units and install temperature sensors.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
       },
       {
-        title: 'Phishing Attack Susceptibility',
-        description: 'Employees are clicking on suspicious emails.',
-        category: RiskCategory.CYBERSECURITY,
-        likelihood: 5,
+        title: 'Phishing Email Campaign',
+        description: 'Employees clicking on suspicious links.',
+        category: RiskCategory.SECURITY, // أو CYBERSECURITY حسب الـ Enum عندك
         impact: 4,
-        identifiedDate: new Date().toISOString(),
+        likelihood: 5,
+        assetTags: ['Email', 'Endpoints', 'Employees'],
+        affectedSystem: 'Corporate Email',
+        riskOwnerEmail: 'hassan@riscover.com',
+        securityAnalystEmail: 'ramy@riscover.com',
+        priority: RiskPriority.HIGH,
+        treatmentStrategy: RiskTreatment.MITIGATE,
+        remediationPlan: 'Conduct monthly phishing simulation.',
         dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)).toISOString()
+      },
+      {
+        title: 'GDPR Non-Compliance',
+        description: 'Customer data retention policy not enforced.',
+        category: RiskCategory.COMPLIANCE,
+        impact: 5,
+        likelihood: 2,
+        assetTags: ['Policy', 'Customer Data'],
+        affectedSystem: 'CRM System',
+        riskOwnerEmail: 'mona@riscover.com',
+        securityAnalystEmail: 'sara@riscover.com',
+        priority: RiskPriority.MEDIUM,
+        treatmentStrategy: RiskTreatment.ACCEPT, // نجرب واحدة Accept
+        remediationPlan: 'Review legal requirements.',
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString()
       }
     ];
 
     for (const riskData of risksData) {
       try {
-        // هنا بننادي السيرفيس كأننا "علي"
-        // لازم نبعت اليوزر كأوبجكت زي ما الـ Controller بيعمل (req.user)
+        // محاكاة اليوزر (req.user)
         const mockUser = { 
-            userId: riskOwner._id, 
-            department: riskOwner.department 
+            userId: riskCreator._id, 
+            department: riskCreator.department,
+            email: riskCreator.email 
         };
 
-        // الدالة دي هتعمل الـ siNo والـ Timeline والـ Score لوحدها
         const newRisk = await risksService.create(riskData as any, mockUser);
-        console.log(`✅ Risk Created: ${newRisk.siNo} - ${newRisk.title}`);
+        console.log(`✅ Risk Created: ${newRisk.siNo} - ${newRisk.title} (Score: ${newRisk.score})`);
 
       } catch (e) {
-        console.log(`⚠️ Risk Creation Failed: ${e.message}`);
-        // غالباً هيفشل لو نفس الـ siNo موجود، وده طبيعي في التكرار
+        // بنتجاهل الخطأ لو الخطر موجود (بسبب Unique siNo أحياناً لو العداد متصفرش)
+        // بس الطبيعي في الـ Seed إنه يكمل
+        console.log(`⚠️ Risk Creation Info: ${e.message}`);
       }
     }
   } else {
-    console.log('❌ Skipping Risks: Risk Owner (ali_it) not found.');
+    console.log('❌ Error: Risk Creator (ali_it) not found.');
   }
 
   console.log('\n🌳 Seeding Complete!');

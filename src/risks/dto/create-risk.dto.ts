@@ -1,6 +1,7 @@
 import { IsString, IsNotEmpty, IsInt, Min, Max, IsDateString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { RiskCategory } from '../enums/risk-category.enum';
+import { RiskTreatment } from '../enums/risk-treatment.enum'; // 1. استيراد
 
 export class CreateRiskDto {
   @ApiProperty({ example: 'Server Room Overheating', description: 'Risk Title' })
@@ -28,6 +29,21 @@ export class CreateRiskDto {
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiProperty({ 
+    enum: RiskTreatment, 
+    example: RiskTreatment.MITIGATE, 
+    required: false,
+    description: 'Default is Mitigate if not provided' 
+  })
+  @IsOptional()
+  @IsEnum(RiskTreatment)
+  treatmentStrategy?: RiskTreatment;
+
+  @ApiProperty({ example: 'Payment Gateway', description: 'The system or asset at risk' })
+  @IsString()
+  @IsNotEmpty()
+  affectedSystem: string;
 
   // الأرقام
   @ApiProperty({ example: 4, minimum: 1, maximum: 5 })

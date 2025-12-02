@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common'; // استيراد
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'; // 1. استيراد
+import { AllExceptionsFilter } from './common/filters/http-exception.filter'; // 1. استيراد
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,6 +12,9 @@ async function bootstrap() {
     forbidNonWhitelisted: true, // لو بعت حقل زيادة يرجع Error
   }));
 
+  // 2. تفعيل الـ Filter الجديد هنا 👇
+  app.useGlobalFilters(new AllExceptionsFilter());
+  
   // ===========================================
   // 2. إعدادات Swagger (هنا السحر كله) ✨
   // ===========================================

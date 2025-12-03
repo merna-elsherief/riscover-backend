@@ -1,41 +1,34 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common'; // استيراد
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'; // 1. استيراد
-import { AllExceptionsFilter } from './common/filters/http-exception.filter'; // 1. استيراد
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // تفعيل الفلترة والتحقق
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // أي حقل زيادة مش موجود في DTO هيتحذف (أمان)
-    forbidNonWhitelisted: true, // لو بعت حقل زيادة يرجع Error
+    whitelist: true,
+    forbidNonWhitelisted: true, 
   }));
 
-  // 2. تفعيل الـ Filter الجديد هنا 👇
   app.useGlobalFilters(new AllExceptionsFilter());
   
-  // ===========================================
-  // 2. إعدادات Swagger (هنا السحر كله) ✨
-  // ===========================================
   const config = new DocumentBuilder()
-    .setTitle('Riscover API') // اسم المشروع
-    .setDescription('The Riscover GRC Solution API description') // وصف
-    .setVersion('1.0') // الإصدار
-    .addBearerAuth() // ⚠️ مهم جداً: عشان زرار القفل يظهر ونقدر نحط التوكن
+    .setTitle('Riscover API') 
+    .setDescription('The Riscover GRC Solution API description')
+    .setVersion('1.0')
+    .addBearerAuth()
     .build();
-
+    
   const document = SwaggerModule.createDocument(app, config);
-  
-  // الرابط اللي هتفتح عليه الصفحة (http://localhost:3000/api)
   SwaggerModule.setup('api', app, document);
-  // ===========================================
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   app.enableCors({
-    origin: 'http://localhost:5173', // السماح للـ frontend
-    credentials: true,               // لو عايزة ترسل cookies أو توكن
+    origin: frontendUrl,
+    credentials: true,
   });
 
-  
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

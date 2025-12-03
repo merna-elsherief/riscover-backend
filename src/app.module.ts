@@ -9,6 +9,7 @@ import { CommonModule } from './common/common.module';
 import { RisksModule } from './risks/risks.module';
 import { ControlsModule } from './controls/controls.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { AssetsModule } from './assets/assets.module';
 
 @Module({
   imports: [
@@ -36,6 +37,8 @@ import { ComplianceModule } from './compliance/compliance.module';
     ControlsModule,
 
     ComplianceModule,
+
+    AssetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

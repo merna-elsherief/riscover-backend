@@ -10,6 +10,7 @@ import { RisksModule } from './risks/risks.module';
 import { ControlsModule } from './controls/controls.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { AssetsModule } from './assets/assets.module';
+import { GovernanceModule } from './governance/governance.module';
 
 @Module({
   imports: [
@@ -39,6 +40,8 @@ import { AssetsModule } from './assets/assets.module';
     ComplianceModule,
 
     AssetsModule,
+
+    GovernanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

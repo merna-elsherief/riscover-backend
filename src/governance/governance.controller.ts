@@ -27,8 +27,16 @@ export class GovernanceController {
     return this.governanceService.findOne(id);
   }
 
+  @Get('stats') 
+  @ApiOperation({ summary: 'Get Top Bar Stats (Total, Closed, etc.)' })
+  getStats() {
+    return this.governanceService.getGovernanceStats();
+  }
+
   @Patch(':id')
+  @ApiOperation({ summary: 'Update document (Status, Progress, Assignee)' })
   update(@Param('id') id: string, @Body() updateDto: any) {
+    // هنا ممكن ننده addActivity كمان لو عايزين نسجل التغيير
     return this.governanceService.update(id, updateDto);
   }
 

@@ -1,6 +1,8 @@
 export enum DocumentStatus {
   DRAFT = 'Draft',
-  ACTIVE = 'Active',
-  UNDER_REVIEW = 'Under Review',
-  RETIRED = 'Retired'
+  OPEN = 'Open',
+  SUBMITTED = 'Submit for review',
+  REOPEN = 'Reopen',
+  CLOSED = 'Closed',
+  PUBLISHED = 'Published'
 }

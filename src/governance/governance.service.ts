@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { GovernanceDocument } from './entities/governance-document.entity';
 import { CreateGovernanceDocumentDto } from './dto/create-governance-document.dto';
 import { DocumentType } from './enums/document-type.enum';
+import { DocumentStatus } from './enums/document-status.enum';
 
 @Injectable()
 export class GovernanceService {
@@ -35,5 +36,27 @@ export class GovernanceService {
 
   async remove(id: string) {
     return this.docModel.findByIdAndDelete(id);
+  }
+
+  async getGovernanceStats() {
+    const total = await this.docModel.countDocuments();
+    const submitted = await this.docModel.countDocuments({ status: DocumentStatus.SUBMITTED });
+    const reopen = await this.docModel.countDocuments({ status: DocumentStatus.REOPEN });
+    const closed = await this.docModel.countDocuments({ status: DocumentStatus.CLOSED });
+
+    return {
+      total,
+      submitted,
+      reopen,
+      closed
+    };
+  }
+
+  async addActivity(id: string, action: string, user: string, details: string) {
+    return this.docModel.findByIdAndUpdate(id, {
+      $push: { 
+        activityTimeline: { action, user, details, date: new Date() } 
+      }
+    }, { new: true });
   }
 }

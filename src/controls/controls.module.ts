@@ -5,9 +5,11 @@ import { ControlsController } from './controls.controller';
 import { Control, ControlSchema } from './entities/control.entity';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Control.name, schema: ControlSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: Control.name, schema: ControlSchema }])
+  ],
   controllers: [ControlsController],
   providers: [ControlsService],
-  exports: [ControlsService, MongooseModule] // بنصدر الموديل عشان Compliance يستخدمه
+  exports: [ControlsService, MongooseModule] // ⚠️ تصدير مهم جداً عشان Compliance يشوفه
 })
 export class ControlsModule {}

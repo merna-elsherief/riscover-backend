@@ -1,56 +1,71 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 import { User } from '../../users/entities/user.entity';
+// استيراد السياسات عشان الربط
+import { GovernanceDocument } from '../../governance/entities/governance-document.entity';
 import { ControlType } from '../enums/control-type.enum';
 import { ControlStatus } from '../enums/control-status.enum';
 
 export type ControlDocument = HydratedDocument<Control>;
 
-// 1. Evidence Sub-document (الملفات المرفوعة)
+// --- A. كلاس فرعي للـ Evidence (الملفات) ---
 @Schema()
 export class EvidenceItem {
-  @Prop() fileName: string;
-  @Prop() fileUrl: string;
-  @Prop() uploadedBy: string;
+  @Prop({ required: true }) fileName: string;
+  @Prop({ required: true }) fileUrl: string; // الرابط من Cloudinary/Local
+  @Prop() uploadedBy: string; // اسم الموظف
   @Prop({ default: Date.now }) uploadDate: Date;
-  @Prop() period: string; // Q1, Q2...
 }
 const EvidenceSchema = SchemaFactory.createForClass(EvidenceItem);
 
-// 2. Timeline Sub-document
+// --- B. كلاس فرعي للـ KPIs (الأرقام والرسوم البيانية) ---
 @Schema()
-export class ControlTimelineItem {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' }) user: User;
-  @Prop() action: string;
-  @Prop({ default: Date.now }) timestamp: Date;
+export class ControlMetric {
+  @Prop() objective: string;         // "Reduce access violations"
+  @Prop() target: number;            // 100 (%)
+  @Prop() actual: number;            // 85 (%)
+  @Prop() frequency: string;         // "Monthly"
+  @Prop() lastUpdated: Date;
 }
-const ControlTimelineSchema = SchemaFactory.createForClass(ControlTimelineItem);
+const MetricSchema = SchemaFactory.createForClass(ControlMetric);
 
-// 3. Main Entity
+// --- C. الكلاس الرئيسي ---
 @Schema({ timestamps: true })
 export class Control {
-  @Prop({ required: true, unique: true }) code: string; // A.8.1.1
-  @Prop({ required: true }) name: string;
-  @Prop() description: string;
-  
-  @Prop({ required: true }) framework: string; // ISO 27001
-  @Prop({ default: 'General' }) domain: string;
+  // 1. التعريف (Identification)
+  @Prop({ required: true, unique: true })
+  code: string; // A.8.1.1
 
+  @Prop({ required: true })
+  name: string; // Inventory of Assets
+
+  @Prop()
+  description: string;
+
+  // 2. العلاقة بالـ Framework (أنتي قولتي هنعمله لوحده، هنا بس بنشاور عليه)
+  @Prop({ required: true, index: true })
+  framework: string; // "ISO 27001" (ده الاسم اللي بنفلتر بيه في الداشبورد)
+
+  @Prop({ default: 'General' })
+  domain: string; // Access Control, Physical Security
+
+  // 3. التصنيف والحالة
   @Prop({ type: String, enum: ControlType, default: ControlType.PREVENTIVE })
   type: ControlType;
 
   @Prop({ type: String, enum: ControlStatus, default: ControlStatus.NOT_STARTED })
   status: ControlStatus;
 
-  // KPIs (من صورة التفاصيل)
-  @Prop() objective: string;
-  @Prop() target: string; // 100%
-  @Prop() actualAchievement: string; // 87%
-  
-  // Lists
-  @Prop({ type: [String] }) linkedPolicies: string[];
-  @Prop({ type: [EvidenceSchema], default: [] }) evidence: EvidenceItem[];
-  @Prop({ type: [ControlTimelineSchema], default: [] }) timeline: ControlTimelineItem[];
+  // 4. الربط بالسياسات (Policies from Governance Module) 🔗
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'GovernanceDocument' }] })
+  linkedPolicies: GovernanceDocument[]; 
+
+  // 5. الأجزاء الفرعية (Sub-Documents)
+  @Prop({ type: [EvidenceSchema], default: [] })
+  evidence: EvidenceItem[]; // قائمة الملفات
+
+  @Prop({ type: MetricSchema })
+  metrics: ControlMetric;   // العدادات
 }
 
 export const ControlSchema = SchemaFactory.createForClass(Control);

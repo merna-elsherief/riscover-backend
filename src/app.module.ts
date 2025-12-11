@@ -11,7 +11,6 @@ import { ControlsModule } from './controls/controls.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { AssetsModule } from './assets/assets.module';
 import { GovernanceModule } from './governance/governance.module';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -42,6 +41,7 @@ import { GovernanceModule } from './governance/governance.module';
     AssetsModule,
 
     GovernanceModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],

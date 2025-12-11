@@ -1,26 +1,39 @@
 import { Injectable } from '@nestjs/common';
-import { CreateGovernanceDto } from './dto/create-governance.dto';
-import { UpdateGovernanceDto } from './dto/update-governance.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { GovernanceDocument } from './entities/governance-document.entity';
+import { CreateGovernanceDocumentDto } from './dto/create-governance-document.dto';
+import { DocumentType } from './enums/document-type.enum';
 
 @Injectable()
 export class GovernanceService {
-  create(createGovernanceDto: CreateGovernanceDto) {
-    return 'This action adds a new governance';
+  constructor(
+    @InjectModel(GovernanceDocument.name) private docModel: Model<GovernanceDocument>,
+  ) {}
+
+  async create(createDto: CreateGovernanceDocumentDto) {
+    return this.docModel.create(createDto);
   }
 
-  findAll() {
-    return `This action returns all governance`;
+  // الفلترة بالنوع (Sidebar Filter)
+  async findAll(type?: DocumentType) {
+    const filter = type ? { type } : {}; // لو مفيش نوع، هات كله
+    return this.docModel.find(filter)
+      .populate('owner', 'firstName lastName email')
+      .sort({ createdAt: -1 }) // الأحدث فوق
+      .exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} governance`;
+  async findOne(id: string) {
+    return this.docModel.findById(id).populate('owner').exec();
   }
 
-  update(id: number, updateGovernanceDto: UpdateGovernanceDto) {
-    return `This action updates a #${id} governance`;
+  // تحديث (عشان نغير الحالة أو نرفع فيرجن جديد)
+  async update(id: string, updateDto: any) {
+    return this.docModel.findByIdAndUpdate(id, updateDto, { new: true });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} governance`;
+  async remove(id: string) {
+    return this.docModel.findByIdAndDelete(id);
   }
 }

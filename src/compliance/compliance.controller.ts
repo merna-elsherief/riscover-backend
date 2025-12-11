@@ -1,15 +1,27 @@
 import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ComplianceService } from './compliance.service';
-import { ApiTags } from '@nestjs/swagger';
+import { CreateFrameworkDto } from './dto/create-framework.dto';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
-@ApiTags('Compliance')
+@ApiTags('Compliance Dashboard')
 @Controller('compliance')
 export class ComplianceController {
   constructor(private readonly complianceService: ComplianceService) {}
 
-  @Post('frameworks')
-  create(@Body() dto: any) { return this.complianceService.create(dto); }
-
   @Get('dashboard')
-  getDashboard() { return this.complianceService.getDashboardStats(); }
+  @ApiOperation({ summary: 'Get Dashboard Statistics (Scores)' })
+  getDashboard() {
+    return this.complianceService.getDashboardStats();
+  }
+
+  @Post('frameworks')
+  @ApiOperation({ summary: 'Define a new Framework' })
+  create(@Body() createDto: CreateFrameworkDto) {
+    return this.complianceService.create(createDto);
+  }
+
+  @Get('frameworks')
+  findAll() {
+    return this.complianceService.findAll();
+  }
 }

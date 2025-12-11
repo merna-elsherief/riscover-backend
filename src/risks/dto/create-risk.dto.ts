@@ -1,71 +1,52 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, Max, IsArray, IsEnum, IsEmail, IsBoolean, IsDateString, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, Min, Max, IsArray, IsMongoId } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer'; // ⚠️ مهم
+import { RiskCategory, RiskStrategy, RiskStatus } from '../enums/risk-enums';
 
-import { RiskCategory } from '../enums/risk-category.enum';
-import { RiskPriority } from '../enums/risk-priority.enum';
-import { RiskTreatment } from '../enums/risk-treatment.enum';
-
-// DTO فرعي للمهام
-class CreateTaskDto {
-  @ApiProperty({ example: 'Automate journal entry validation' })
+export class CreateRiskDto {
+  @ApiProperty()
   @IsString() @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ example: 'John Smith' })
-  @IsString() @IsNotEmpty()
-  assignee: string;
-
-  @ApiProperty({ example: '2025-10-15' })
-  @IsDateString()
-  dueDate: string;
-}
-
-export class CreateRiskDto {
-  // Basic Info
-  @ApiProperty({ example: 'Financial Reporting Errors' })
-  @IsString() @IsNotEmpty() title: string;
-
-  @ApiProperty({ example: 'Risk of misstatements due to manual entries...' })
-  @IsString() @IsNotEmpty() description: string;
+  @ApiProperty()
+  @IsString() @IsOptional()
+  description?: string;
 
   @ApiProperty({ enum: RiskCategory })
-  @IsEnum(RiskCategory) category: RiskCategory;
+  @IsEnum(RiskCategory)
+  category: RiskCategory;
 
-  // Assets
-  @ApiProperty({ example: ['SQL Server', 'General Ledger'], isArray: true })
-  @IsOptional() @IsArray() @IsString({ each: true })
-  assetTags?: string[];
+  // Linkage
+  @ApiProperty({ type: [String] })
+  @IsArray() @IsMongoId({ each: true }) @IsOptional()
+  affectedAssets?: string[];
 
-  @ApiProperty({ example: 'Finance System' })
-  @IsString() @IsNotEmpty() affectedSystem: string;
+  @ApiProperty() @IsMongoId() @IsOptional()
+  owner?: string;
 
-  // Emails
-  @ApiProperty() @IsEmail() riskOwnerEmail: string;
-  @ApiProperty() @IsEmail() securityAnalystEmail: string;
+  // Inherent Assessment (1-5)
+  @ApiProperty({ minimum: 1, maximum: 5 })
+  @IsInt() @Min(1) @Max(5)
+  inherentLikelihood: number;
 
-  // Scoring
-  @ApiProperty({ example: 4 }) @IsInt() @Min(1) @Max(5) impact: number;
-  @ApiProperty({ example: 3 }) @IsInt() @Min(1) @Max(5) likelihood: number;
+  @ApiProperty({ minimum: 1, maximum: 5 })
+  @IsInt() @Min(1) @Max(5)
+  inherentImpact: number;
 
-  // Treatment & Plan
-  @ApiProperty({ enum: RiskPriority })
-  @IsOptional() @IsEnum(RiskPriority) priority?: RiskPriority;
+  // Treatment
+  @ApiProperty({ enum: RiskStrategy })
+  @IsEnum(RiskStrategy) @IsOptional()
+  treatmentStrategy?: RiskStrategy;
 
-  @ApiProperty({ enum: RiskTreatment })
-  @IsOptional() @IsEnum(RiskTreatment) treatmentStrategy?: RiskTreatment;
+  @ApiProperty({ type: [String] })
+  @IsArray() @IsMongoId({ each: true }) @IsOptional()
+  mitigatingControls?: string[];
 
-  @ApiProperty() @IsOptional() @IsString() remediationPlanDescription?: string;
-  @ApiProperty() @IsOptional() @IsString() remediationPlanSummary?: string;
-  @ApiProperty() @IsOptional() @IsString() resourcesRequired?: string;
-  @ApiProperty() @IsOptional() @IsBoolean() automaticReminders?: boolean;
-  @ApiProperty() @IsOptional() @IsDateString() dueDate?: string;
+  // Residual inputs (Optional at creation)
+  @ApiProperty({ required: false })
+  @IsInt() @Min(1) @Max(5) @IsOptional()
+  residualLikelihood?: number;
 
-  // Tasks Array 🆕
-  @ApiProperty({ type: [CreateTaskDto] })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateTaskDto)
-  tasks?: CreateTaskDto[];
+  @ApiProperty({ required: false })
+  @IsInt() @Min(1) @Max(5) @IsOptional()
+  residualImpact?: number;
 }

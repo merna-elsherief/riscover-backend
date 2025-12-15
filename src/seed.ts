@@ -1,137 +1,102 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UsersService } from './users/users.service';
-import { AssetsService } from './assets/assets.service';
-import { GovernanceService } from './governance/governance.service';
-import { ControlsService } from './controls/controls.service';
-import { ComplianceService } from './compliance/compliance.service';
 import { RisksService } from './risks/risks.service';
-import { UserRole } from './users/entities/user.entity';
-import { DocumentType } from './governance/enums/document-type.enum';
-import { DocumentStatus } from './governance/enums/document-status.enum'; // تأكدي إن ده الجديد
-import { Priority } from './governance/enums/priority.enum'; // 🆕 استيراد جديد
-import { ControlStatus } from './controls/enums/control-status.enum';
-import { RiskCategory, RiskStrategy } from './risks/enums/risk-enums';
-import { AssetType } from './assets/enums/asset-type.enum';
-import { AssetStatus } from './assets/enums/asset-status.enum';
+import { CreateRiskDto } from './risks/dto/create-risk.dto';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
-
-  const usersService = app.get(UsersService);
-  const assetsService = app.get(AssetsService);
-  const govService = app.get(GovernanceService);
-  const controlsService = app.get(ControlsService);
-  const complianceService = app.get(ComplianceService);
   const risksService = app.get(RisksService);
 
-  console.log('🌱 Starting Seeding Process...');
+  // 1. تنظيف الداتا القديمة (اختياري)
+  // await risksService['riskModel'].deleteMany({}); 
+  // console.log('🧹 Old data cleaned...');
 
-  try {
-    // 1. Users
-    console.log('👤 Seeding Users...');
-    const admin: any = await usersService.create({
-      username: 'admin', firstName: 'System', lastName: 'Admin',
-      email: 'admin@riscover.com', password: 'Password123!',
-      role: UserRole.ADMIN, jobTitle: 'Super Admin'
-    } as any);
-
-    const ciso: any = await usersService.create({
-      username: 'ciso_user', firstName: 'Hassan', lastName: 'Ali',
-      email: 'ciso@riscover.com', password: 'Password123!',
-      role: UserRole.BU_HEAD, jobTitle: 'CISO'
-    } as any);
-
-    const riskOfficer: any = await usersService.create({
-      username: 'risk_officer', firstName: 'Mona', lastName: 'Zaki',
-      email: 'risk@riscover.com', password: 'Password123!',
-      role: UserRole.COMPLIANCE_MANAGER, jobTitle: 'Risk Officer'
-    } as any);
-    console.log('✅ Users Created.');
-
-    // 2. Frameworks
-    console.log('📘 Seeding Frameworks...');
-    const isoFramework: any = await complianceService.create({
-      name: 'ISO 27001', description: 'Information Security Management',
-      type: 'Security', version: '2022'
-    });
-    console.log('✅ ISO 27001 Created.');
-
-    // 3. Governance (Policies) - 🆕 التحديث هنا
-    console.log('📜 Seeding Policies...');
-    const accessPolicy: any = await govService.create({
-      code: 'ISP-09',
-      title: 'Access Control Policy',
-      description: 'Policy regarding user access rights',
-      type: DocumentType.POLICY,
+  const risksToSeed: CreateRiskDto[] = [
+    // الحالة الأولى: خطر حرج جداً (Critical)
+    {
+      riskName: 'Main Database Corruption',
+      description: 'Potential corruption of the core banking ledger due to faulty storage controller firmware.',
+      category: 'Technical',
+      impactedSystem: 'Core Banking DB',
+      priority: 'Critical', // ✅ الحقل الجديد
+      assetTags: ['Storage', 'Database', 'Server Room A'],
       
-      // Ownership & Assignment
-      owner: ciso._id.toString(),
-      assignee: riskOfficer._id.toString(), // 🆕 Risk Officer هو اللي شغال عليها
-      participants: [admin._id.toString()], // 🆕
+      riskOwnerEmail: 'cto@bank.com',
+      securityAnalystEmail: 'sec-ops@bank.com',
+      existingControl: 'Daily Snapshots',
       
-      // Status & Progress
-      status: DocumentStatus.OPEN, // 🆕 الحالة الجديدة
-      priority: Priority.HIGH,     // 🆕 الأولوية
-      progress: 45,                // 🆕 البروجرس بار
+      impactScore: 5,
+      likelihoodScore: 5, 
+      // Rating: 25 (Critical)
       
-      // Dates
-      nextReviewDate: '2025-12-31',
-      dueDate: '2024-06-30',
+      treatmentOption: 'Mitigate',
+      remediationPlan: 'Apply firmware patch v2.4 immediately and restore consistency check.',
+      remediationPlanSummary: 'Firmware Update',
+      resourcesRequired: 'DevOps Team, 2 Hours Downtime',
       
-      fileUrl: 'http://localhost:3000/uploads/dummy-policy.pdf',
-    } as any);
-    console.log('✅ Policies Created with new fields.');
+      autoReminders: true, // ✅ الحقل الجديد
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(), // بعد اسبوع
+    },
 
-    // 4. Controls
-    console.log('🛡️ Seeding Controls...');
-    const firewallControl: any = await controlsService.create({
-      code: 'A.13.1', name: 'Network Security Management',
-      framework: isoFramework.name,
-      status: ControlStatus.IMPLEMENTED,
-      linkedPolicies: [accessPolicy._id.toString()]
-    } as any);
+    // الحالة الثانية: خطر متوسط (Medium) - تشغيلي
+    {
+      riskName: 'Insufficient Call Center Staff',
+      description: 'High wait times during peak hours leading to customer dissatisfaction.',
+      category: 'Operational',
+      impactedSystem: 'CRM Portal',
+      priority: 'Medium', // ✅ الحقل الجديد
+      assetTags: ['Human Resources', 'CRM'],
+      
+      riskOwnerEmail: 'head.support@bank.com',
+      securityAnalystEmail: 'risk.compliance@bank.com',
+      
+      impactScore: 3,
+      likelihoodScore: 3,
+      // Rating: 9 (Medium)
+      
+      treatmentOption: 'Accept', // هنقبل الخطر ده مؤقتاً
+      remediationPlan: 'Hire 5 part-time agents for next quarter.',
+      
+      autoReminders: false,
+      dueDate: '2025-12-31',
+    },
 
-    const backupControl: any = await controlsService.create({
-      code: 'A.12.3', name: 'Backup',
-      framework: isoFramework.name,
-      status: ControlStatus.IN_PROGRESS,
-      linkedPolicies: [accessPolicy._id.toString()]
-    } as any);
-    console.log('✅ Controls Created.');
+    // الحالة الثالثة: خطر منخفض (Low) - طرف ثالث
+    {
+      riskName: 'Marketing Email Vendor Delay',
+      description: 'Vendor API occasionally times out (less than 1% of requests).',
+      category: 'Third Party',
+      impactedSystem: 'Email Gateway',
+      priority: 'Low', // ✅ الحقل الجديد
+      
+      riskOwnerEmail: 'marketing@bank.com',
+      securityAnalystEmail: 'vendor.mgt@bank.com',
+      
+      impactScore: 2,
+      likelihoodScore: 2,
+      // Rating: 4 (Low)
+      
+      treatmentOption: 'Avoid',
+      remediationPlan: 'Switch to backup provider if error rate exceeds 2%.',
+      
+      autoReminders: true,
+      dueDate: '2025-06-30',
+    }
+  ];
 
-    // 5. Assets
-    console.log('💻 Seeding Assets...');
-    const dbServer: any = await assetsService.create({
-      name: 'Main Database Server',
-      type: AssetType.HARDWARE, category: 'Servers',
-      operatingSystem: 'Windows Server 2022', manufacturer: 'Dell',
-      versionModel: 'PowerEdge R750', serialNumber: 'SN-99887766',
-      businessCriticality: 5,
-      owner: ciso._id.toString(),
-      status: AssetStatus.ACTIVE
-    } as any);
-    console.log(`✅ Asset Created.`);
+  console.log('🌱 Seeding started...');
 
-    // 6. Risks
-    console.log('🔥 Seeding Risks...');
-    const risk1: any = await risksService.create({
-      title: 'Database Data Loss',
-      description: 'Risk of losing customer data',
-      category: RiskCategory.OPERATIONAL,
-      owner: riskOfficer._id.toString(),
-      affectedAssets: [dbServer._id.toString()],
-      inherentLikelihood: 4, inherentImpact: 5, 
-      treatmentStrategy: RiskStrategy.MITIGATE,
-      mitigatingControls: [backupControl._id.toString()], 
-      residualLikelihood: 2, residualImpact: 2 
-    } as any);
-    console.log(`✅ Risk Created.`);
-
-  } catch (error) {
-    console.error('❌ Seeding Failed:', error);
-  } finally {
-    await app.close();
+  for (const risk of risksToSeed) {
+    const createdRisk = await risksService.create(risk);
+    console.log(`✅ Created Risk: ${createdRisk.riskCustomId}`);
+    console.log(`   └─ Name: ${createdRisk.riskName}`);
+    console.log(`   └─ Level: ${createdRisk.riskLevel} | Priority: ${createdRisk.priority}`);
+    console.log(`   └─ Plan: ${createdRisk.remediationPlan ? 'Yes' : 'No'}`);
+    console.log('-----------------------------------');
   }
+
+  console.log('🚀 Seeding complete!');
+  await app.close();
 }
+
 bootstrap();

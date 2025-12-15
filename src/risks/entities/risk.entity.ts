@@ -1,72 +1,95 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
-import { User } from '../../users/entities/user.entity';
-import { Asset } from '../../assets/entities/asset.entity';
-import { Control } from '../../controls/entities/control.entity';
-import { RiskCategory, RiskStrategy, RiskStatus, RiskLevel } from '../enums/risk-enums';
+import { Document } from 'mongoose';
 
-export type RiskDocument = HydratedDocument<Risk>;
+export type RiskDocument = Risk & Document;
+
+// التايم لاين زي ما هو
+@Schema({ timestamps: true })
+export class RiskTimeline {
+  @Prop({ required: true })
+  entryType: string;
+
+  @Prop({ required: true })
+  text: string;
+}
+const RiskTimelineSchema = SchemaFactory.createForClass(RiskTimeline);
 
 @Schema({ timestamps: true })
 export class Risk {
-  // --- 1. Identification ---
-  @Prop({ required: true, unique: true })
-  riskId: string; // Auto-generated: R-2025-001
+  @Prop({ unique: true })
+  riskCustomId: string; // R-2025-001
 
+  // 1. Risk Name
   @Prop({ required: true })
-  title: string;
+  riskName: string;
 
+  // ✅ 2. Description (موجود أهو)
   @Prop()
   description: string;
 
-  @Prop({ type: String, enum: RiskCategory })
-  category: RiskCategory;
+  // ✅ 3. Category (موجود)
+  @Prop({ required: true })
+  category: string;
 
-  // --- 2. Linkage (الربط) ---
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Asset' }] })
-  affectedAssets: Asset[]; // الخطر ده على انهي أجهزة؟
+  // ✅ 4. Impacted System (موجود)
+  @Prop()
+  impactedSystem: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-  owner: User; // مين المسؤول عن الخطر ده؟
+  // ✅ 5. Priority (تمت إضافتها كحقل منفصل حسب طلبك)
+  @Prop({ enum: ['Critical', 'High', 'Medium', 'Low'], default: 'Medium' })
+  priority: string;
 
-  // --- 3. Inherent Risk Assessment (الخطر الخام - قبل العلاج) ---
-  @Prop({ min: 1, max: 5 })
-  inherentLikelihood: number; // احتمالية (1-5)
+  @Prop([String])
+  assetTags: string[];
 
-  @Prop({ min: 1, max: 5 })
-  inherentImpact: number;     // تأثير (1-5)
+  @Prop({ required: true })
+  riskOwnerEmail: string;
+
+  @Prop({ required: true })
+  securityAnalystEmail: string;
 
   @Prop()
-  inherentScore: number;      // (Calculated: L x I)
+  existingControl: string;
 
-  @Prop({ type: String, enum: RiskLevel })
-  inherentLevel: RiskLevel;   // (Calculated: High, Critical...)
+  @Prop({ required: true, min: 1, max: 5 })
+  impactScore: number;
 
-  // --- 4. Treatment (العلاج) ---
-  @Prop({ type: String, enum: RiskStrategy, default: RiskStrategy.MITIGATE })
-  treatmentStrategy: RiskStrategy;
+  @Prop({ required: true, min: 1, max: 5 })
+  likelihoodScore: number;
 
-  // الضوابط اللي هنطبقها عشان نعالج الخطر
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Control' }] })
-  mitigatingControls: Control[]; 
+  // ده المحسوب (Rating = Impact * Likelihood)
+  @Prop()
+  riskRating: number;
 
-  // --- 5. Residual Risk Assessment (الخطر المتبقي - بعد العلاج) ---
-  // بنسيبه فاضي لحد ما نطبق الضوابط ونقيم تاني
-  @Prop({ min: 1, max: 5 })
-  residualLikelihood: number;
+  // ده المحسوب (Level)
+  @Prop()
+  riskLevel: string;
 
-  @Prop({ min: 1, max: 5 })
-  residualImpact: number;
+  @Prop({ required: true })
+  treatmentOption: string;
+
+  // ✅ 6. Remediation Plan (موجود كنص)
+  @Prop()
+  remediationPlan: string;
 
   @Prop()
-  residualScore: number;
+  resourcesRequired: string;
 
-  @Prop({ type: String, enum: RiskLevel })
-  residualLevel: RiskLevel;
+  // ✅ 7. Auto Reminders (موجود)
+  @Prop({ default: false })
+  autoReminders: boolean;
 
-  // --- 6. Status ---
-  @Prop({ type: String, enum: RiskStatus, default: RiskStatus.DRAFT })
-  status: RiskStatus;
+  @Prop()
+  remediationPlanSummary: string;
+
+  @Prop({ required: true })
+  dueDate: Date;
+
+  @Prop({ default: 'Draft' })
+  status: string;
+
+  @Prop({ type: [RiskTimelineSchema], default: [] })
+  timeline: RiskTimeline[];
 }
 
 export const RiskSchema = SchemaFactory.createForClass(Risk);

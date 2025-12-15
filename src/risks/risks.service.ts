@@ -1,107 +1,117 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Risk } from './entities/risk.entity';
+import { Risk, RiskDocument, RiskTimeline } from './entities/risk.entity';
 import { CreateRiskDto } from './dto/create-risk.dto';
-import { CommonService } from '../common/common.service'; 
-import { RiskLevel } from './enums/risk-enums'; // تأكدي من مسار الـ Enum
+import { UpdateRiskDto } from './dto/update-risk.dto';
 
 @Injectable()
 export class RisksService {
-  constructor(
-    @InjectModel(Risk.name) private riskModel: Model<Risk>,
-    private commonService: CommonService, // 💉 حقن خدمة العدادات
-  ) {}
+  constructor(@InjectModel(Risk.name) private riskModel: Model<RiskDocument>) {}
 
-  // ==========================================
-  // 1. Helper Methods (حسابات)
-  // ==========================================
-  
-  // دالة بتحول الرقم (النتيجة) لمستوى (High/Low)
-  private calculateLevel(score: number): RiskLevel {
-    if (score >= 20) return RiskLevel.CRITICAL; // 20-25
-    if (score >= 12) return RiskLevel.HIGH;     // 12-19
-    if (score >= 5)  return RiskLevel.MEDIUM;   // 5-11
-    return RiskLevel.LOW;                       // 1-4
-  }
-
-  // ==========================================
-  // 2. CRUD Operations
-  // ==========================================
-
-  async create(createDto: CreateRiskDto) {
-    // أ) توليد الـ ID (مثال: R-2025-001)
-    const seq = await this.commonService.getNextSequence('risks');
-    const riskId = `R-${new Date().getFullYear()}-${seq.toString().padStart(3, '0')}`;
-
-    // ب) حساب Inherent Score (قبل العلاج)
-    const inherentScore = createDto.inherentLikelihood * createDto.inherentImpact;
-    const inherentLevel = this.calculateLevel(inherentScore);
-
-    // ج) حساب Residual Score (بعد العلاج) - لو البيانات موجودة
-    let residualData = {};
-    if (createDto.residualLikelihood && createDto.residualImpact) {
-      const rScore = createDto.residualLikelihood * createDto.residualImpact;
-      residualData = {
-        residualScore: rScore,
-        residualLevel: this.calculateLevel(rScore)
-      };
-    }
-
-    // د) تجميع البيانات والحفظ
-    const newRisk = new this.riskModel({
-      ...createDto,
-      riskId,
-      inherentScore,
-      inherentLevel,
-      ...residualData
-    });
-
-    return newRisk.save();
-  }
-
-  async findAll() {
-    return this.riskModel.find()
-      .populate('affectedAssets', 'name assetId')     // هات اسم وكود الأصل
-      .populate('mitigatingControls', 'code name status') // هات الضوابط
-      .populate('owner', 'firstName lastName jobTitle')   // هات المالك
+  // 1️⃣ دالة توليد الـ ID (R-2025-001)
+  async generateNextRiskId(): Promise<string> {
+    const currentYear = new Date().getFullYear();
+    const prefix = `R-${currentYear}`;
+    const lastRisk = await this.riskModel
+      .findOne({ riskCustomId: { $regex: `^${prefix}` } })
       .sort({ createdAt: -1 })
       .exec();
+
+    let sequence = 1;
+    if (lastRisk) {
+      const lastSequenceStr = lastRisk.riskCustomId.split('-').pop();
+      if (lastSequenceStr) sequence = parseInt(lastSequenceStr, 10) + 1;
+    }
+    return `${prefix}-${sequence.toString().padStart(3, '0')}`;
   }
 
+  // 2️⃣ دالة حساب مستوى الخطر
+  private calculateRiskLevel(rating: number): string {
+    if (rating >= 16) return 'Critical';
+    if (rating >= 12) return 'High';
+    if (rating >= 6) return 'Medium';
+    return 'Low';
+  }
+
+  // 3️⃣ Create: إنشاء خطر جديد
+  async create(createRiskDto: CreateRiskDto): Promise<Risk> {
+    const riskRating = createRiskDto.impactScore * createRiskDto.likelihoodScore;
+    const riskLevel = this.calculateRiskLevel(riskRating);
+    const nextId = await this.generateNextRiskId();
+
+    const initialTimeline: Partial<RiskTimeline> = {
+      entryType: 'ACTION',
+      text: `Risk created by System (Owner: ${createRiskDto.riskOwnerEmail})`,
+    };
+
+    const newRisk = new this.riskModel({
+      ...createRiskDto, // 👈 دي بتنسخ كل الحقول (Priority, Description, etc.)
+      riskCustomId: nextId,
+      riskRating,
+      riskLevel,
+      timeline: [initialTimeline],
+    });
+
+    return await newRisk.save();
+  }
+
+  // 4️⃣ Read All
+  async findAll() {
+    return this.riskModel.find().sort({ createdAt: -1 }).exec();
+  }
+
+  // 5️⃣ Read One
   async findOne(id: string) {
-    const risk = await this.riskModel.findById(id)
-      .populate('affectedAssets')
-      .populate('mitigatingControls')
-      .populate('owner')
-      .exec();
-    
-    if (!risk) {
-      throw new NotFoundException(`Risk #${id} not found`);
-    }
+    const risk = await this.riskModel.findById(id).exec();
+    if (!risk) throw new NotFoundException(`Risk #${id} not found`);
     return risk;
   }
 
-  // 👇 الدوال اللي كانت ناقصة وعملت Error
+  // 6️⃣ Update: تحديث خطر (شامل كل الحقول)
+  async update(id: string, updateRiskDto: UpdateRiskDto): Promise<Risk> {
+    const existingRisk = await this.riskModel.findById(id);
+    if (!existingRisk) throw new NotFoundException(`Risk #${id} not found`);
 
-  async update(id: string, updateDto: any) {
-    // ملحوظة: لو حابة تعيدي حساب الـ Score عند التحديث، ممكن تضيفي اللوجيك هنا
-    // حالياً بنحدث البيانات زي ما هي
-    const updatedRisk = await this.riskModel
-      .findByIdAndUpdate(id, updateDto, { new: true }) // new: true بترجع الداتا الجديدة
-      .exec();
+    let newRating = existingRisk.riskRating;
+    let newLevel = existingRisk.riskLevel;
 
-    if (!updatedRisk) {
-      throw new NotFoundException(`Risk #${id} not found`);
+    // إعادة الحساب فقط لو القيم الرقمية اتغيرت
+    if (updateRiskDto.impactScore || updateRiskDto.likelihoodScore) {
+      const impact = updateRiskDto.impactScore ?? existingRisk.impactScore;
+      const likelihood = updateRiskDto.likelihoodScore ?? existingRisk.likelihoodScore;
+      newRating = impact * likelihood;
+      newLevel = this.calculateRiskLevel(newRating);
     }
+
+    const updateTimelineEntry: Partial<RiskTimeline> = {
+      entryType: 'UPDATE',
+      text: `Risk updated via API.`,
+    };
+
+    const updatedRisk = await this.riskModel.findByIdAndUpdate(
+      id,
+      {
+        ...updateRiskDto, // 👈 السطر ده هو اللي بيحدث الـ Description والـ Priority وأي حقل جديد
+        riskRating: newRating,
+        riskLevel: newLevel,
+        $push: { timeline: updateTimelineEntry },
+      },
+      { new: true }
+    ).exec();
+
+    if (!updatedRisk) throw new NotFoundException(`Risk #${id} not found`);
     return updatedRisk;
   }
 
+  // 7️⃣ Delete
   async remove(id: string) {
     const deletedRisk = await this.riskModel.findByIdAndDelete(id).exec();
-    if (!deletedRisk) {
-      throw new NotFoundException(`Risk #${id} not found`);
-    }
-    return deletedRisk;
+    if (!deletedRisk) throw new NotFoundException(`Risk #${id} not found`);
+    return { message: 'Risk deleted successfully', id };
+  }
+
+  async getNextIdForDisplay() {
+    return { nextId: await this.generateNextRiskId() };
   }
 }

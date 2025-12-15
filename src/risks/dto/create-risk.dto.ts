@@ -1,52 +1,109 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsInt, Min, Max, IsArray, IsMongoId } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { RiskCategory, RiskStrategy, RiskStatus } from '../enums/risk-enums';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsEmail, IsNotEmpty, IsNumber, Min, Max, IsOptional, IsBoolean, IsDateString, IsEnum, IsArray } from 'class-validator';
+
+// ✅ دول الناقصين اللي بيطلعوا الايرور في الـ Seed
+export enum RiskStatus {
+  DRAFT = 'Draft',
+  IN_PROGRESS = 'In Progress',
+  CLOSED = 'Closed',
+}
+
+export enum TreatmentOption {
+  ACCEPT = 'Accept',
+  MITIGATE = 'Mitigate',
+  AVOID = 'Avoid',
+}
 
 export class CreateRiskDto {
-  @ApiProperty()
-  @IsString() @IsNotEmpty()
-  title: string;
+  @ApiProperty({ example: 'Database Failure' })
+  @IsString()
+  @IsNotEmpty()
+  riskName: string;
 
-  @ApiProperty()
-  @IsString() @IsOptional()
+  @ApiPropertyOptional({ example: 'Detailed description of the risk...' })
+  @IsString()
+  @IsOptional()
   description?: string;
 
-  @ApiProperty({ enum: RiskCategory })
-  @IsEnum(RiskCategory)
-  category: RiskCategory;
+  @ApiProperty({ example: 'Technical' })
+  @IsString()
+  @IsNotEmpty()
+  category: string;
 
-  // Linkage
-  @ApiProperty({ type: [String] })
-  @IsArray() @IsMongoId({ each: true }) @IsOptional()
-  affectedAssets?: string[];
+  @ApiPropertyOptional({ example: 'Core Banking System' })
+  @IsString()
+  @IsOptional()
+  impactedSystem?: string;
 
-  @ApiProperty() @IsMongoId() @IsOptional()
-  owner?: string;
+  @ApiPropertyOptional({ example: 'High', enum: ['Critical', 'High', 'Medium', 'Low'] })
+  @IsString()
+  @IsOptional()
+  priority?: string;
 
-  // Inherent Assessment (1-5)
-  @ApiProperty({ minimum: 1, maximum: 5 })
-  @IsInt() @Min(1) @Max(5)
-  inherentLikelihood: number;
+  @ApiPropertyOptional({ example: ['Server 1', 'DB 2'] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  assetTags?: string[];
 
-  @ApiProperty({ minimum: 1, maximum: 5 })
-  @IsInt() @Min(1) @Max(5)
-  inherentImpact: number;
+  @ApiProperty({ example: 'owner@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  riskOwnerEmail: string;
 
-  // Treatment
-  @ApiProperty({ enum: RiskStrategy })
-  @IsEnum(RiskStrategy) @IsOptional()
-  treatmentStrategy?: RiskStrategy;
+  @ApiProperty({ example: 'analyst@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  securityAnalystEmail: string;
 
-  @ApiProperty({ type: [String] })
-  @IsArray() @IsMongoId({ each: true }) @IsOptional()
-  mitigatingControls?: string[];
+  @ApiPropertyOptional({ example: 'Firewall' })
+  @IsString()
+  @IsOptional()
+  existingControl?: string;
 
-  // Residual inputs (Optional at creation)
-  @ApiProperty({ required: false })
-  @IsInt() @Min(1) @Max(5) @IsOptional()
-  residualLikelihood?: number;
+  @ApiProperty({ example: 4 })
+  @IsNumber()
+  @Min(1) @Max(5)
+  impactScore: number;
 
-  @ApiProperty({ required: false })
-  @IsInt() @Min(1) @Max(5) @IsOptional()
-  residualImpact?: number;
+  @ApiProperty({ example: 3 })
+  @IsNumber()
+  @Min(1) @Max(5)
+  likelihoodScore: number;
+
+  // لاحظي هنا بنستخدم الـ Enum اللي عرفناه فوق
+  @ApiProperty({ example: 'Mitigate', enum: TreatmentOption })
+  @IsEnum(TreatmentOption) // أو خليها IsString لو عايزه تبعتي نص حر
+  @IsNotEmpty()
+  treatmentOption: string; // خليناها string عشان تقبل النص اللي جي من الـ Enum
+
+  @ApiPropertyOptional({ example: 'We will upgrade the servers...' })
+  @IsString()
+  @IsOptional()
+  remediationPlan?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  resourcesRequired?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsBoolean()
+  @IsOptional()
+  autoReminders?: boolean;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  remediationPlanSummary?: string;
+
+  @ApiProperty({ example: '2025-12-01' })
+  @IsDateString()
+  @IsNotEmpty()
+  dueDate: string;
+
+  @ApiPropertyOptional({ enum: RiskStatus, default: RiskStatus.DRAFT })
+  @IsEnum(RiskStatus)
+  @IsOptional()
+  status?: RiskStatus = RiskStatus.DRAFT;
 }

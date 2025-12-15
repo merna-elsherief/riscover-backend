@@ -6,7 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
-import { RisksModule } from './risks/risks.module';
+import { RiskModule } from './risks/risks.module';
 import { ControlsModule } from './controls/controls.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { AssetsModule } from './assets/assets.module';
@@ -32,7 +32,7 @@ import { GovernanceModule } from './governance/governance.module';
 
     CommonModule,
 
-    RisksModule,
+    RiskModule,
 
     ControlsModule,
 

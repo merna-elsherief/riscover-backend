@@ -1,60 +1,109 @@
-import { IsString, IsNotEmpty, IsInt, Min, Max, IsDateString, IsOptional, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { RiskCategory } from '../enums/risk-category.enum';
-import { RiskTreatment } from '../enums/risk-treatment.enum'; // 1. استيراد
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsEmail, IsNotEmpty, IsNumber, Min, Max, IsOptional, IsBoolean, IsDateString, IsEnum, IsArray } from 'class-validator';
+
+// ✅ دول الناقصين اللي بيطلعوا الايرور في الـ Seed
+export enum RiskStatus {
+  DRAFT = 'Draft',
+  IN_PROGRESS = 'In Progress',
+  CLOSED = 'Closed',
+}
+
+export enum TreatmentOption {
+  ACCEPT = 'Accept',
+  MITIGATE = 'Mitigate',
+  AVOID = 'Avoid',
+}
 
 export class CreateRiskDto {
-  @ApiProperty({ example: 'Server Room Overheating', description: 'Risk Title' })
+  @ApiProperty({ example: 'Database Failure' })
   @IsString()
   @IsNotEmpty()
-  title: string;
+  riskName: string;
 
-  @ApiProperty({ example: 'AC units are old and failing...', description: 'Full Description' })
+  @ApiPropertyOptional({ example: 'Detailed description of the risk...' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({ example: 'Technical' })
   @IsString()
   @IsNotEmpty()
-  description: string;
+  category: string;
 
-  @ApiProperty({ enum: RiskCategory, example: RiskCategory.OPERATIONAL })
+  @ApiPropertyOptional({ example: 'Core Banking System' })
+  @IsString()
   @IsOptional()
-  @IsEnum(RiskCategory)
-  category?: RiskCategory;
+  impactedSystem?: string;
 
-  // التواريخ الجديدة
-  @ApiProperty({ example: '2023-11-01T00:00:00.000Z', required: false })
+  @ApiPropertyOptional({ example: 'High', enum: ['Critical', 'High', 'Medium', 'Low'] })
+  @IsString()
   @IsOptional()
+  priority?: string;
+
+  @ApiPropertyOptional({ example: ['Server 1', 'DB 2'] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  assetTags?: string[];
+
+  @ApiProperty({ example: 'owner@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  riskOwnerEmail: string;
+
+  @ApiProperty({ example: 'analyst@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  securityAnalystEmail: string;
+
+  @ApiPropertyOptional({ example: 'Firewall' })
+  @IsString()
+  @IsOptional()
+  existingControl?: string;
+
+  @ApiProperty({ example: 4 })
+  @IsNumber()
+  @Min(1) @Max(5)
+  impactScore: number;
+
+  @ApiProperty({ example: 3 })
+  @IsNumber()
+  @Min(1) @Max(5)
+  likelihoodScore: number;
+
+  // لاحظي هنا بنستخدم الـ Enum اللي عرفناه فوق
+  @ApiProperty({ example: 'Mitigate', enum: TreatmentOption })
+  @IsEnum(TreatmentOption) // أو خليها IsString لو عايزه تبعتي نص حر
+  @IsNotEmpty()
+  treatmentOption: string; // خليناها string عشان تقبل النص اللي جي من الـ Enum
+
+  @ApiPropertyOptional({ example: 'We will upgrade the servers...' })
+  @IsString()
+  @IsOptional()
+  remediationPlan?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  resourcesRequired?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsBoolean()
+  @IsOptional()
+  autoReminders?: boolean;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  remediationPlanSummary?: string;
+
+  @ApiProperty({ example: '2025-12-01' })
   @IsDateString()
-  identifiedDate?: string;
-
-  @ApiProperty({ example: '2023-12-31T00:00:00.000Z', required: false })
-  @IsOptional()
-  @IsDateString()
-  dueDate?: string;
-
-  @ApiProperty({ 
-    enum: RiskTreatment, 
-    example: RiskTreatment.MITIGATE, 
-    required: false,
-    description: 'Default is Mitigate if not provided' 
-  })
-  @IsOptional()
-  @IsEnum(RiskTreatment)
-  treatmentStrategy?: RiskTreatment;
-
-  @ApiProperty({ example: 'Payment Gateway', description: 'The system or asset at risk' })
-  @IsString()
   @IsNotEmpty()
-  affectedSystem: string;
+  dueDate: string;
 
-  // الأرقام
-  @ApiProperty({ example: 4, minimum: 1, maximum: 5 })
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  likelihood: number;
-
-  @ApiProperty({ example: 5, minimum: 1, maximum: 5 })
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  impact: number;
+  @ApiPropertyOptional({ enum: RiskStatus, default: RiskStatus.DRAFT })
+  @IsEnum(RiskStatus)
+  @IsOptional()
+  status?: RiskStatus = RiskStatus.DRAFT;
 }

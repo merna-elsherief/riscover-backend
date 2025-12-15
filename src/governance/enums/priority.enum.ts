@@ -1,5 +1,4 @@
-export enum RiskRating {
-  CRITICAL = 'Critical',
+export enum Priority {
   HIGH = 'High',
   MEDIUM = 'Medium',
   LOW = 'Low'

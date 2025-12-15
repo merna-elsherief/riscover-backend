@@ -22,6 +22,9 @@ export class User {
   @Prop({ required: true })
   lastName: string;
 
+  @Prop({ default: 'Employee' }) 
+  jobTitle: string; // مثال: CISO, IT Manager, HR Specialist
+
   // 2. إضافة الـ Username (لازم يكون فريد زي الإيميل)
   @Prop({ required: true, unique: true })
   username: string;

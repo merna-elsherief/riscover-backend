@@ -1,164 +1,101 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UsersService } from './users/users.service';
-import { ControlsService } from './controls/controls.service';
 import { RisksService } from './risks/risks.service';
-
-// استيراد الـ Enums
-import { UserRole } from './users/entities/user.entity';
-import { ControlType } from './controls/enums/control-type.enum';
-import { RiskCategory } from './risks/enums/risk-category.enum';
+import { CreateRiskDto } from './risks/dto/create-risk.dto';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
-
-  // استدعاء الخدمات
-  const usersService = app.get(UsersService);
-  const controlsService = app.get(ControlsService);
   const risksService = app.get(RisksService);
 
-  console.log('🚀 Starting Database Seeding...\n');
+  // 1. تنظيف الداتا القديمة (اختياري)
+  // await risksService['riskModel'].deleteMany({}); 
+  // console.log('🧹 Old data cleaned...');
 
-  // ==========================================
-  // 1. زراعة المستخدمين (Users)
-  // ==========================================
-  console.log('👤 Seeding Users...');
-  
-  const usersData = [
+  const risksToSeed: CreateRiskDto[] = [
+    // الحالة الأولى: خطر حرج جداً (Critical)
     {
-      firstName: 'Admin', lastName: 'System', username: 'admin',
-      email: 'admin@riscover.com', password: '123',
-      role: UserRole.ADMIN, department: 'Management'
-    },
-    {
-      firstName: 'Hassan', lastName: 'IT Manager', username: 'hassan_head',
-      email: 'hassan@riscover.com', password: '123',
-      role: UserRole.BU_HEAD, department: 'IT'
-    },
-    {
-      firstName: 'Mona', lastName: 'HR Manager', username: 'mona_hr',
-      email: 'mona@riscover.com', password: '123',
-      role: UserRole.BU_HEAD, department: 'HR'
-    },
-    {
-      firstName: 'Ali', lastName: 'Risk Owner', username: 'ali_it',
-      email: 'ali@riscover.com', password: '123',
-      role: UserRole.RISK_OWNER, department: 'IT'
-    },
-    {
-      firstName: 'Sara', lastName: 'Compliance', username: 'sara_comp',
-      email: 'sara@riscover.com', password: '123',
-      role: UserRole.COMPLIANCE_MANAGER, department: 'Risk Dept'
-    }
-  ];
-
-  // بنخزن اليوزرز اللي اتعملوا عشان نستخدمهم في المخاطر
-  const createdUsers: any = {};
-
-  for (const user of usersData) {
-    try {
-      // بنحاول نجيب اليوزر الأول لو موجود
-      let existingUser : any = await usersService.findByUsername(user.username);
+      riskName: 'Main Database Corruption',
+      description: 'Potential corruption of the core banking ledger due to faulty storage controller firmware.',
+      category: 'Technical',
+      impactedSystem: 'Core Banking DB',
+      priority: 'Critical', // ✅ الحقل الجديد
+      assetTags: ['Storage', 'Database', 'Server Room A'],
       
-      if (!existingUser) {
-        // لو مش موجود نكريته
-        existingUser = await usersService.create(user as any);
-        console.log(`✅ Created: ${user.username}`);
-      } else {
-        console.log(`⚠️ Exists: ${user.username}`);
-      }
-      createdUsers[user.username] = existingUser;
-
-    } catch (error) {
-      console.error(`❌ Error creating ${user.username}:`, error.message);
-    }
-  }
-
-  // ==========================================
-  // 2. زراعة الضوابط (Controls)
-  // ==========================================
-  console.log('\n🛡️ Seeding Controls...');
-
-  const controlsData = [
-    {
-      code: 'ISO-A.12.1', name: 'Ops Procedures', type: ControlType.PREVENTIVE,
-      description: 'Documented operating procedures'
+      riskOwnerEmail: 'cto@bank.com',
+      securityAnalystEmail: 'sec-ops@bank.com',
+      existingControl: 'Daily Snapshots',
+      
+      impactScore: 5,
+      likelihoodScore: 5, 
+      // Rating: 25 (Critical)
+      
+      treatmentOption: 'Mitigate',
+      remediationPlan: 'Apply firmware patch v2.4 immediately and restore consistency check.',
+      remediationPlanSummary: 'Firmware Update',
+      resourcesRequired: 'DevOps Team, 2 Hours Downtime',
+      
+      autoReminders: true, // ✅ الحقل الجديد
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(), // بعد اسبوع
     },
+
+    // الحالة الثانية: خطر متوسط (Medium) - تشغيلي
     {
-      code: 'PCI-FW-01', name: 'Firewall Config', type: ControlType.PREVENTIVE,
-      description: 'Restrict inbound and outbound traffic'
+      riskName: 'Insufficient Call Center Staff',
+      description: 'High wait times during peak hours leading to customer dissatisfaction.',
+      category: 'Operational',
+      impactedSystem: 'CRM Portal',
+      priority: 'Medium', // ✅ الحقل الجديد
+      assetTags: ['Human Resources', 'CRM'],
+      
+      riskOwnerEmail: 'head.support@bank.com',
+      securityAnalystEmail: 'risk.compliance@bank.com',
+      
+      impactScore: 3,
+      likelihoodScore: 3,
+      // Rating: 9 (Medium)
+      
+      treatmentOption: 'Accept', // هنقبل الخطر ده مؤقتاً
+      remediationPlan: 'Hire 5 part-time agents for next quarter.',
+      
+      autoReminders: false,
+      dueDate: '2025-12-31',
     },
+
+    // الحالة الثالثة: خطر منخفض (Low) - طرف ثالث
     {
-      code: 'NIST-ID-1', name: 'Asset Inventory', type: ControlType.DETECTIVE,
-      description: 'Maintain inventory of all systems'
-    },
-    {
-      code: 'DRP-01', name: 'Backup Recovery', type: ControlType.CORRECTIVE,
-      description: 'Regular automated backups'
+      riskName: 'Marketing Email Vendor Delay',
+      description: 'Vendor API occasionally times out (less than 1% of requests).',
+      category: 'Third Party',
+      impactedSystem: 'Email Gateway',
+      priority: 'Low', // ✅ الحقل الجديد
+      
+      riskOwnerEmail: 'marketing@bank.com',
+      securityAnalystEmail: 'vendor.mgt@bank.com',
+      
+      impactScore: 2,
+      likelihoodScore: 2,
+      // Rating: 4 (Low)
+      
+      treatmentOption: 'Avoid',
+      remediationPlan: 'Switch to backup provider if error rate exceeds 2%.',
+      
+      autoReminders: true,
+      dueDate: '2025-06-30',
     }
   ];
 
-  for (const control of controlsData) {
-    try {
-      await controlsService.create(control as any);
-      console.log(`✅ Control: ${control.code}`);
-    } catch (e) {
-      console.log(`⚠️ Skipped Control: ${control.code}`);
-    }
+  console.log('🌱 Seeding started...');
+
+  for (const risk of risksToSeed) {
+    const createdRisk = await risksService.create(risk);
+    console.log(`✅ Created Risk: ${createdRisk.riskCustomId}`);
+    console.log(`   └─ Name: ${createdRisk.riskName}`);
+    console.log(`   └─ Level: ${createdRisk.riskLevel} | Priority: ${createdRisk.priority}`);
+    console.log(`   └─ Plan: ${createdRisk.remediationPlan ? 'Yes' : 'No'}`);
+    console.log('-----------------------------------');
   }
 
-  // ==========================================
-  // 3. زراعة المخاطر (Risks)
-  // ==========================================
-  console.log('\n🔥 Seeding Initial Risks...');
-
-  const riskOwner = createdUsers['ali_it']; // علي هو اللي هيعمل المخاطر
-
-  if (riskOwner) {
-    const risksData = [
-      {
-        title: 'Server Room Overheating',
-        description: 'AC units are old and might fail during summer.',
-        category: RiskCategory.OPERATIONAL,
-        likelihood: 4,
-        impact: 5,
-        identifiedDate: new Date().toISOString(), // تاريخ النهاردة
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString() // كمان شهر
-      },
-      {
-        title: 'Phishing Attack Susceptibility',
-        description: 'Employees are clicking on suspicious emails.',
-        category: RiskCategory.CYBERSECURITY,
-        likelihood: 5,
-        impact: 4,
-        identifiedDate: new Date().toISOString(),
-        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)).toISOString()
-      }
-    ];
-
-    for (const riskData of risksData) {
-      try {
-        // هنا بننادي السيرفيس كأننا "علي"
-        // لازم نبعت اليوزر كأوبجكت زي ما الـ Controller بيعمل (req.user)
-        const mockUser = { 
-            userId: riskOwner._id, 
-            department: riskOwner.department 
-        };
-
-        // الدالة دي هتعمل الـ siNo والـ Timeline والـ Score لوحدها
-        const newRisk = await risksService.create(riskData as any, mockUser);
-        console.log(`✅ Risk Created: ${newRisk.siNo} - ${newRisk.title}`);
-
-      } catch (e) {
-        console.log(`⚠️ Risk Creation Failed: ${e.message}`);
-        // غالباً هيفشل لو نفس الـ siNo موجود، وده طبيعي في التكرار
-      }
-    }
-  } else {
-    console.log('❌ Skipping Risks: Risk Owner (ali_it) not found.');
-  }
-
-  console.log('\n🌳 Seeding Complete!');
+  console.log('🚀 Seeding complete!');
   await app.close();
 }
 

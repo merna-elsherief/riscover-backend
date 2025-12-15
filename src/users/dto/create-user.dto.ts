@@ -11,6 +11,10 @@ export class CreateUserDto {
   lastName: string;
 
   @IsString()
+  @IsOptional() // اختياري، لو مدخلتهوش هيبقى "Employee"
+  jobTitle?: string;
+
+  @IsString()
   @IsNotEmpty()
   username: string;
 

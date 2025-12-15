@@ -1,94 +1,48 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Patch, 
-  Param, 
-  Delete, 
-  UseGuards, 
-  Request, 
-  HttpCode, 
-  HttpStatus 
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger'; // ✅ استيراد
 import { RisksService } from './risks.service';
 import { CreateRiskDto } from './dto/create-risk.dto';
-import { UpdateRiskStatusDto } from './dto/update-risk-status.dto';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { UpdateRiskDto } from './dto/update-risk.dto';
 
-@ApiTags('Risks') // 1. قسم خاص للمخاطر في Swagger
-@ApiBearerAuth()  // 2. علامة القفل (يتطلب Token)
-@UseGuards(AuthGuard('jwt')) // 3. حماية الكنترولر بالكامل
+@ApiTags('risks') // ✅ يجمعهم تحت عنوان واحد
 @Controller('risks')
 export class RisksController {
   constructor(private readonly risksService: RisksService) {}
 
-  // --- 1. إنشاء خطر جديد ---
   @Post()
-  @ApiOperation({ summary: 'Create a new risk' })
-  create(@Body() createRiskDto: CreateRiskDto, @Request() req) {
-    // بنبعت الـ User object كله عشان ناخد منه الـ ID والقسم
-    return this.risksService.create(createRiskDto, req.user);
+  @ApiOperation({ summary: 'Create a new risk' }) // ✅ وصف للعملية
+  @ApiResponse({ status: 201, description: 'The risk has been successfully created.' })
+  create(@Body() createRiskDto: CreateRiskDto) {
+    return this.risksService.create(createRiskDto);
   }
 
-  // --- 2. عرض كل المخاطر ---
   @Get()
   @ApiOperation({ summary: 'Get all risks' })
   findAll() {
     return this.risksService.findAll();
   }
 
-  // 🆕 دالة جلب الرقم القادم (لازم تتحط قبل @Get(':id'))
-@Get('next-id')
-@ApiOperation({ summary: 'Get the next available Risk ID (Preview)' })
-getNextId() {
-  return this.risksService.getNextId();
-}
+  @Get('next-id')
+  @ApiOperation({ summary: 'Get the next auto-generated ID' })
+  getNextId() {
+    return this.risksService.getNextIdForDisplay();
+  }
 
-  // --- 3. عرض خطر واحد بالتفصيل ---
   @Get(':id')
-  @ApiOperation({ summary: 'Get risk details (with timeline & controls)' })
+  @ApiOperation({ summary: 'Get a specific risk by ID' })
   findOne(@Param('id') id: string) {
     return this.risksService.findOne(id);
   }
 
-  // --- 4. تحديث حالة الخطر (Workflow) ---
-  @Patch(':id/status')
-  @ApiOperation({ summary: 'Update risk status (BU Head Approval)' })
-  updateStatus(
-    @Param('id') id: string, 
-    @Body() updateRiskStatusDto: UpdateRiskStatusDto,
-    @Request() req
-  ) {
-    return this.risksService.updateStatus(id, updateRiskStatusDto, req.user);
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a risk' })
+  update(@Param('id') id: string, @Body() updateRiskDto: UpdateRiskDto) {
+    return this.risksService.update(id, updateRiskDto);
   }
 
-  // --- 5. إضافة تعليق للتايم لاين ---
-  @Post(':id/timeline')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Add a comment to risk timeline' })
-  @ApiBody({ schema: { type: 'object', properties: { comment: { type: 'string' } } } }) // توضيح شكل البودي في Swagger
-  addTimelineComment(
-    @Param('id') id: string,
-    @Body('comment') comment: string,
-    @Request() req
-  ) {
-    return this.risksService.addComment(id, comment, req.user);
-  }
-
-  // --- 6. تعيين ضوابط للخطر (Mitigation) ---
-  // (Endpoint جديدة عشان نربط الـ Controls)
-  @Post(':id/controls')
-  @ApiOperation({ summary: 'Assign controls to mitigate risk' })
-  @ApiBody({ schema: { type: 'object', properties: { controlIds: { type: 'array', items: { type: 'string' } } } } })
-  assignControls(
-    @Param('id') id: string,
-    @Body('controlIds') controlIds: string[]
-  ) {
-    // ملحوظة: دي محتاجة تكوني ضيفتي دالة assignControls في السيرفيس
-    // لو لسه ما ضيفتيهاش، ممكن تعملي comment للجزء ده مؤقتاً
-    // return this.risksService.assignControls(id, controlIds);
-    return { message: "Control assignment logic needs to be implemented in service first" };
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a risk' })
+  remove(@Param('id') id: string) {
+    return this.risksService.remove(id);
   }
 }

@@ -1,130 +1,95 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
-import { User } from '../../users/entities/user.entity';
-import { Control } from '../../controls/entities/control.entity';
+import { Document } from 'mongoose';
 
-// استيراد الـ Enums (تأكدي إن الملفات دي موجودة في folder enums)
-import { RiskStatus } from '../enums/risk-status.enum';
-import { RiskTreatment } from '../enums/risk-treatment.enum';
-import { RiskCategory } from '../enums/risk-category.enum';
-import { RiskRating } from '../enums/risk-rating.enum';
+export type RiskDocument = Risk & Document;
 
-export type RiskDocument = HydratedDocument<Risk>;
-
-// --- 1. كلاس فرعي لشكل الحدث في التايم لاين ---
-@Schema()
-export class RiskTimelineItem {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
-  user: User; // مين اللي عمل الحركة دي
+// التايم لاين زي ما هو
+@Schema({ timestamps: true })
+export class RiskTimeline {
+  @Prop({ required: true })
+  entryType: string;
 
   @Prop({ required: true })
-  action: string; // نوع الحركة (Created, Status Change, Comment)
-
-  @Prop()
-  details: string; // تفاصيل (مثلاً: Changed status to Accepted)
-
-  @Prop({ default: Date.now })
-  timestamp: Date;
+  text: string;
 }
-const RiskTimelineSchema = SchemaFactory.createForClass(RiskTimelineItem);
+const RiskTimelineSchema = SchemaFactory.createForClass(RiskTimeline);
 
-// --- 2. كلاس فرعي للخطر المتبقي ---
-class ResidualRiskScore {
-  @Prop() likelihood: number;
-  @Prop() impact: number;
-  @Prop() score: number;
-  @Prop({ type: String, enum: RiskRating }) rating: RiskRating;
-}
-
-// --- 3. الكلاس الأساسي للخطر ---
 @Schema({ timestamps: true })
 export class Risk {
-  // المعلومات الأساسية
-  @Prop({ required: true, unique: true })
-  siNo: string; // RISK-001
+  @Prop({ unique: true })
+  riskCustomId: string; // R-2025-001
 
+  // 1. Risk Name
   @Prop({ required: true })
-  title: string;
+  riskName: string;
 
-  // 👇 الإضافة الجديدة
-  @Prop({ required: true }) 
-  affectedSystem: string; // مثال: "Payment Gateway", "HR Portal"
-
+  // ✅ 2. Description (موجود أهو)
   @Prop()
   description: string;
 
-  @Prop({ type: String, enum: RiskCategory, default: RiskCategory.OPERATIONAL })
-  category: RiskCategory;
+  // ✅ 3. Category (موجود)
+  @Prop({ required: true })
+  category: string;
 
-  // التواريخ الجديدة 📅
-  @Prop({ default: Date.now })
-  identifiedDate: Date; // تاريخ الاكتشاف
+  // ✅ 4. Impacted System (موجود)
+  @Prop()
+  impactedSystem: string;
+
+  // ✅ 5. Priority (تمت إضافتها كحقل منفصل حسب طلبك)
+  @Prop({ enum: ['Critical', 'High', 'Medium', 'Low'], default: 'Medium' })
+  priority: string;
+
+  @Prop([String])
+  assetTags: string[];
+
+  @Prop({ required: true })
+  riskOwnerEmail: string;
+
+  @Prop({ required: true })
+  securityAnalystEmail: string;
 
   @Prop()
-  dueDate: Date; // تاريخ الاستحقاق
+  existingControl: string;
 
-  // العلاقات
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  owner: User;
+  @Prop({ required: true, min: 1, max: 5 })
+  impactScore: number;
+
+  @Prop({ required: true, min: 1, max: 5 })
+  likelihoodScore: number;
+
+  // ده المحسوب (Rating = Impact * Likelihood)
+  @Prop()
+  riskRating: number;
+
+  // ده المحسوب (Level)
+  @Prop()
+  riskLevel: string;
+
+  @Prop({ required: true })
+  treatmentOption: string;
+
+  // ✅ 6. Remediation Plan (موجود كنص)
+  @Prop()
+  remediationPlan: string;
 
   @Prop()
-  department: string;
+  resourcesRequired: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Control' }] })
-  controls: Control[];
+  // ✅ 7. Auto Reminders (موجود)
+  @Prop({ default: false })
+  autoReminders: boolean;
 
-  // التايم لاين (سجل الأحداث) 🕒
+  @Prop()
+  remediationPlanSummary: string;
+
+  @Prop({ required: true })
+  dueDate: Date;
+
+  @Prop({ default: 'Draft' })
+  status: string;
+
   @Prop({ type: [RiskTimelineSchema], default: [] })
-  timeline: RiskTimelineItem[];
-
-  // القرارات والحالة
-  @Prop({ type: String, enum: RiskTreatment, default: RiskTreatment.MITIGATE })
-  treatmentStrategy: RiskTreatment;
-
-  @Prop({ type: String, enum: RiskStatus, default: RiskStatus.DRAFT })
-  status: RiskStatus;
-
-  @Prop()
-  acceptanceJustification: string;
-
-  // الحسابات (Inherent Risk)
-  @Prop({ min: 1, max: 5, required: true })
-  likelihood: number;
-
-  @Prop({ min: 1, max: 5, required: true })
-  impact: number;
-
-  @Prop()
-  score: number;
-
-  @Prop({ type: String, enum: RiskRating })
-  rating: RiskRating;
-
-  // الحسابات (Residual Risk)
-  @Prop({ type: ResidualRiskScore })
-  residualRisk: ResidualRiskScore;
+  timeline: RiskTimeline[];
 }
 
 export const RiskSchema = SchemaFactory.createForClass(Risk);
-
-// --- Hooks: معادلات الحساب التلقائي ---
-const calculateRating = (score: number): RiskRating => {
-  if (score >= 20) return RiskRating.CRITICAL;
-  if (score >= 12) return RiskRating.HIGH;
-  if (score >= 6) return RiskRating.MEDIUM;
-  return RiskRating.LOW;
-};
-
-RiskSchema.pre('save', function(next) {
-  // حساب الخطر الأصلي
-  if (this.likelihood && this.impact) {
-    this.score = this.likelihood * this.impact;
-    this.rating = calculateRating(this.score);
-  }
-  // حساب الخطر المتبقي
-  if (this.residualRisk && this.residualRisk.likelihood && this.residualRisk.impact) {
-    this.residualRisk.score = this.residualRisk.likelihood * this.residualRisk.impact;
-    this.residualRisk.rating = calculateRating(this.residualRisk.score);
-  }
-  next();
-});

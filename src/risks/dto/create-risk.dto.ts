@@ -1,7 +1,34 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEmail, IsNotEmpty, IsNumber, Min, Max, IsOptional, IsBoolean, IsDateString, IsEnum, IsArray } from 'class-validator';
+import { 
+  IsString, IsEmail, IsNotEmpty, IsNumber, Min, Max, 
+  IsOptional, IsBoolean, IsDateString, IsEnum, IsArray, 
+  ValidateNested 
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-// ✅ دول الناقصين اللي بيطلعوا الايرور في الـ Seed
+// ------------------------------------------
+// 1. Task DTO
+// ------------------------------------------
+export class CreateRiskTaskDto {
+  @ApiProperty({ example: 'Update Firewall Rules' })
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @ApiProperty({ example: 'admin@company.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  assigneeEmail: string;
+
+  @ApiProperty({ example: '2025-10-01' })
+  @IsDateString()
+  @IsNotEmpty()
+  dueDate: string;
+}
+
+// ------------------------------------------
+// Enums
+// ------------------------------------------
 export enum RiskStatus {
   DRAFT = 'Draft',
   IN_PROGRESS = 'In Progress',
@@ -14,13 +41,16 @@ export enum TreatmentOption {
   AVOID = 'Avoid',
 }
 
+// ------------------------------------------
+// 2. Main DTO (CreateRiskDto)
+// ------------------------------------------
 export class CreateRiskDto {
   @ApiProperty({ example: 'Database Failure' })
   @IsString()
   @IsNotEmpty()
   riskName: string;
 
-  @ApiPropertyOptional({ example: 'Detailed description of the risk...' })
+  @ApiPropertyOptional({ example: 'Detailed description...' })
   @IsString()
   @IsOptional()
   description?: string;
@@ -61,6 +91,7 @@ export class CreateRiskDto {
   @IsOptional()
   existingControl?: string;
 
+  // ✅ Inherent Risk Scores (قبل المعالجة)
   @ApiProperty({ example: 4 })
   @IsNumber()
   @Min(1) @Max(5)
@@ -71,16 +102,36 @@ export class CreateRiskDto {
   @Min(1) @Max(5)
   likelihoodScore: number;
 
-  // لاحظي هنا بنستخدم الـ Enum اللي عرفناه فوق
+  // ✅✅✅ Residual Risk Scores (الجديد: بعد المعالجة) ✅✅✅
+  // خليناها Optional عشان ممكن متتحطش وقت الإنشاء
+  @ApiPropertyOptional({ example: 2, description: 'Impact score after mitigation' })
+  @IsNumber()
+  @Min(1) @Max(5)
+  @IsOptional()
+  residualImpactScore?: number;
+
+  @ApiPropertyOptional({ example: 1, description: 'Likelihood score after mitigation' })
+  @IsNumber()
+  @Min(1) @Max(5)
+  @IsOptional()
+  residualLikelihoodScore?: number;
+
   @ApiProperty({ example: 'Mitigate', enum: TreatmentOption })
-  @IsEnum(TreatmentOption) // أو خليها IsString لو عايزه تبعتي نص حر
+  @IsEnum(TreatmentOption)
   @IsNotEmpty()
-  treatmentOption: string; // خليناها string عشان تقبل النص اللي جي من الـ Enum
+  treatmentOption: string;
 
   @ApiPropertyOptional({ example: 'We will upgrade the servers...' })
   @IsString()
   @IsOptional()
   remediationPlan?: string;
+
+  @ApiPropertyOptional({ type: [CreateRiskTaskDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateRiskTaskDto)
+  @IsOptional()
+  mitigationTasks?: CreateRiskTaskDto[];
 
   @ApiPropertyOptional()
   @IsString()
@@ -102,7 +153,11 @@ export class CreateRiskDto {
   @IsNotEmpty()
   dueDate: string;
 
-  @ApiPropertyOptional({ enum: RiskStatus, default: RiskStatus.DRAFT })
+  @ApiPropertyOptional({ 
+    enum: RiskStatus, 
+    default: RiskStatus.DRAFT,
+    description: 'Status of the risk (defaults to Draft)'
+  })
   @IsEnum(RiskStatus)
   @IsOptional()
   status?: RiskStatus = RiskStatus.DRAFT;

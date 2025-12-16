@@ -3,7 +3,14 @@ import { Document } from 'mongoose';
 
 export type RiskDocument = Risk & Document;
 
-// التايم لاين زي ما هو
+// --------------------------------------------------------
+// 1️⃣  تعريف الـ Timeline (تم إضافة date لحل المشكلة)
+// --------------------------------------------------------
+export enum RiskStatus {
+  DRAFT = 'Draft',
+  IN_PROGRESS = 'In Progress',
+  CLOSED = 'Closed',
+}
 @Schema({ timestamps: true })
 export class RiskTimeline {
   @Prop({ required: true })
@@ -11,31 +18,55 @@ export class RiskTimeline {
 
   @Prop({ required: true })
   text: string;
+
+  // ✅✅ الحل للايرور TS2353: ضفنا الحقل ده عشان السيرفس تتعرف عليه
+  @Prop({ default: Date.now })
+  date: Date;
 }
 const RiskTimelineSchema = SchemaFactory.createForClass(RiskTimeline);
 
-@Schema({ timestamps: true })
+// --------------------------------------------------------
+// 2️⃣ تعريف الـ Task كـ Sub-document (عشان تتحفظ مع الـ Risk)
+// --------------------------------------------------------
+@Schema()
+export class MitigationTask {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  assigneeEmail: string;
+
+  @Prop({ required: true })
+  dueDate: Date;
+}
+// بنعمل Schema صغيرة للتاسكات عشان نحطها جوه الـ Risk
+const MitigationTaskSchema = SchemaFactory.createForClass(MitigationTask);
+
+// --------------------------------------------------------
+// 3️⃣ الـ Risk Entity الأساسية
+// --------------------------------------------------------
+@Schema({ 
+  timestamps: true,
+  toJSON: { virtuals: true }, 
+  toObject: { virtuals: true }
+})
 export class Risk {
   @Prop({ unique: true })
-  riskCustomId: string; // R-2025-001
+  riskCustomId: string;
 
-  // 1. Risk Name
   @Prop({ required: true })
   riskName: string;
 
-  // ✅ 2. Description (موجود أهو)
   @Prop()
   description: string;
+  
 
-  // ✅ 3. Category (موجود)
   @Prop({ required: true })
   category: string;
 
-  // ✅ 4. Impacted System (موجود)
   @Prop()
   impactedSystem: string;
 
-  // ✅ 5. Priority (تمت إضافتها كحقل منفصل حسب طلبك)
   @Prop({ enum: ['Critical', 'High', 'Medium', 'Low'], default: 'Medium' })
   priority: string;
 
@@ -51,31 +82,47 @@ export class Risk {
   @Prop()
   existingControl: string;
 
+  // --- Inherent Risk ---
   @Prop({ required: true, min: 1, max: 5 })
   impactScore: number;
 
   @Prop({ required: true, min: 1, max: 5 })
   likelihoodScore: number;
 
-  // ده المحسوب (Rating = Impact * Likelihood)
   @Prop()
   riskRating: number;
 
-  // ده المحسوب (Level)
   @Prop()
   riskLevel: string;
 
+  // --- Residual Risk ---
+  @Prop({ min: 1, max: 5 })
+  residualImpactScore: number;
+
+  @Prop({ min: 1, max: 5 })
+  residualLikelihoodScore: number;
+
+  @Prop()
+  residualRiskRating: number;
+
+  @Prop()
+  residualRiskLevel: string; 
+
+  // --- Treatment ---
   @Prop({ required: true })
   treatmentOption: string;
 
-  // ✅ 6. Remediation Plan (موجود كنص)
   @Prop()
   remediationPlan: string;
+
+  // ✅✅ هنا التغيير المهم جداً عشان التاسكات تتحفظ
+  // بدل Virtual، خليناها Array of Schema حقيقية
+  @Prop({ type: [MitigationTaskSchema], default: [] })
+  mitigationTasks: MitigationTask[];
 
   @Prop()
   resourcesRequired: string;
 
-  // ✅ 7. Auto Reminders (موجود)
   @Prop({ default: false })
   autoReminders: boolean;
 
@@ -85,7 +132,11 @@ export class Risk {
   @Prop({ required: true })
   dueDate: Date;
 
-  @Prop({ default: 'Draft' })
+@Prop({ 
+    required: true, 
+    enum: RiskStatus, 
+    default: RiskStatus.DRAFT // القيمة الافتراضية لو محدش بعت حاجة
+  })
   status: string;
 
   @Prop({ type: [RiskTimelineSchema], default: [] })

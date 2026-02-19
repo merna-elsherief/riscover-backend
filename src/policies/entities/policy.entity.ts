@@ -1,7 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-// 1. أنواع الوثائق (من المنيو اللي على الشمال)
+// 🔥 السطر ده اللي كان ناقص وبيعمل الإيرور في السيرفس 🔥
+export type PolicyDocument = Policy & Document;
+
+// 1. أنواع الوثائق
 export enum DocumentType {
   POLICY = 'Policy',
   STANDARD = 'Standard',
@@ -10,13 +13,12 @@ export enum DocumentType {
   BASELINE = 'Baseline',
 }
 
-// 2. حالة الوثيقة (من الجدول والتفاصيل)
+// 2. حالة الوثيقة (محدثة حسب الصورة الجديدة)
 export enum PolicyStatus {
   DRAFT = 'Draft',
-  ACTIVE = 'Active',
-  UNDER_REVIEW = 'Under Review',
   OPEN = 'Open',
-  REOPENED = 'Reopened',
+  SUBMIT_FOR_REVIEW = 'Submit for Review',
+  REOPEN = 'Reopen',
   CLOSED = 'Closed',
 }
 
@@ -28,13 +30,30 @@ export enum PolicyPriority {
   CRITICAL = 'Critical',
 }
 
-// 4. شكل عنصر التايم لاين
+// 4. أنواع أحداث التايم لاين الجديدة
+export enum TimelineEventType {
+  SYSTEM = 'System',       // تحديثات أوتوماتيكية زي تغيير الحالة
+  COMMENT = 'Comment',     // تعليق عادي أو ملاحظة
+  FILE = 'File',           // رفع ملف (PDF, Docx)
+  LINK = 'Link',           // إضافة رابط
+}
+
+// 5. شكل عنصر التايم لاين المتطور
 export class PolicyTimelineEvent {
-  @Prop({ required: true })
-  action: string; // مثال: "Assessment updated (Impact: 3 -> 4)"
+  @Prop({ type: String, enum: TimelineEventType, required: true })
+  type: TimelineEventType;
 
   @Prop({ required: true })
-  performedBy: string; // الإيميل أو اسم الشخص
+  performedBy: string; // اسم الشخص (مثال: Khaled Alaa)
+
+  @Prop()
+  content?: string; // نص التعليق، أو رسالة النظام، أو الرابط
+
+  @Prop()
+  fileName?: string; // لو الحدث رفع ملف، نحفظ اسمه هنا (مثال: 2_20260122.docx)
+
+  @Prop()
+  fileUrl?: string; // مسار الملف على السيرفر أو Cloudinary عشان الفرونت يحمله
 
   @Prop({ default: Date.now })
   timestamp: Date;
@@ -42,9 +61,8 @@ export class PolicyTimelineEvent {
 
 @Schema({ timestamps: true })
 export class Policy extends Document {
-  // الكود المميز (مثال: ISP-01 أو PS-1)
   @Prop({ unique: true })
-  policyCode: string;
+  policyCode: string; // مثال: PS-1
 
   @Prop({ required: true })
   title: string;
@@ -55,27 +73,15 @@ export class Policy extends Document {
   @Prop({ type: String, enum: DocumentType, default: DocumentType.POLICY })
   documentType: DocumentType;
 
-  // الفريم ووركس (ISO27001, NIST, GDPR...)
-  @Prop([String])
-  frameworksMapped: string[];
-
-  // المالك (مثلاً: CISO)
+  // Assignee
   @Prop()
-  owner: string;
-
-  // الشخص المعين حالياً للمراجعة (Assignee)
+  assigneeName: string; // في الصورة ظاهر الاسم "Khaled Alaa"
+  
   @Prop()
   assigneeEmail: string;
 
-  // المشاركين (Participants) - مجموعة إيميلات
-  @Prop([String])
-  participants: string[];
-
   @Prop()
-  dueDate: Date; // تاريخ الاستحقاق / المراجعة
-
-  @Prop({ default: 'v1.0' })
-  version: string;
+  dueDate: Date;
 
   @Prop({ type: String, enum: PolicyStatus, default: PolicyStatus.DRAFT })
   status: PolicyStatus;
@@ -83,26 +89,30 @@ export class Policy extends Document {
   @Prop({ type: String, enum: PolicyPriority })
   priority: PolicyPriority;
 
-  // شريط التقدم (Task progress) من 0 لـ 100
+  // Task progress: 0 to 100
   @Prop({ default: 0, min: 0, max: 100 })
   progress: number;
 
-  // الخصائص (Properties: Published / Draft)
+  // Properties: Published vs Draft
   @Prop({ default: false })
   isPublished: boolean;
 
-  // التاجز (Task tag)
+  // Task tags
   @Prop([String])
   tags: string[];
 
-  // Activity Timeline 🚀
+  // Participants (مجموعة إيميلات أو أسماء)
+  @Prop([String])
+  participants: string[];
+
+  // Activity Timeline
   @Prop({ type: [PolicyTimelineEvent], default: [] })
   timeline: PolicyTimelineEvent[];
 }
 
 export const PolicySchema = SchemaFactory.createForClass(Policy);
 
-// Middleware عشان نعمل كود أوتوماتيك لو مفيش كود مبعوت (زي PS-1)
+// إنشاء الكود التلقائي لو مش موجود
 PolicySchema.pre('save', async function (next) {
   if (!this.policyCode) {
     const count = await (this.constructor as any).countDocuments();

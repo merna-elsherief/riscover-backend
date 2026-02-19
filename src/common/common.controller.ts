@@ -35,7 +35,7 @@ export class CommonController {
     },
   })
   @UseInterceptors(FileInterceptor('file')) // 'file' هو اسم الحقل اللي في الفورم
-  async uploadFile(@UploadedFile() file: Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('File is required');
     }

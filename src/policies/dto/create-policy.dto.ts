@@ -20,63 +20,52 @@ export class CreatePolicyDto {
   @IsEnum(DocumentType)
   documentType?: DocumentType;
 
-  @ApiPropertyOptional({ type: [String], example: ['ISO27001', 'NIST'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  frameworksMapped?: string[];
-
-  @ApiPropertyOptional({ example: 'CISO' })
+  @ApiPropertyOptional({ example: 'Khaled Alaa' })
   @IsOptional()
   @IsString()
-  owner?: string;
+  assigneeName?: string;
 
   @ApiPropertyOptional({ example: 'khaled@company.com' })
   @IsOptional()
   @IsString()
   assigneeEmail?: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['user1@com.com', 'user2@com.com'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  participants?: string[];
-
-  @ApiPropertyOptional({ example: '2025-11-11T00:00:00.000Z' })
+  @ApiPropertyOptional({ example: '2026-11-11T00:00:00.000Z' })
   @IsOptional()
   @IsDateString()
   dueDate?: string;
 
-  @ApiPropertyOptional({ example: 'v1.1' })
-  @IsOptional()
-  @IsString()
-  version?: string;
-
-  @ApiPropertyOptional({ enum: PolicyStatus, example: PolicyStatus.OPEN })
+  @ApiPropertyOptional({ enum: PolicyStatus, example: PolicyStatus.SUBMIT_FOR_REVIEW })
   @IsOptional()
   @IsEnum(PolicyStatus)
   status?: PolicyStatus;
 
-  @ApiPropertyOptional({ enum: PolicyPriority, example: PolicyPriority.HIGH })
+  @ApiPropertyOptional({ enum: PolicyPriority })
   @IsOptional()
   @IsEnum(PolicyPriority)
   priority?: PolicyPriority;
 
-  @ApiPropertyOptional({ example: 40, description: 'Progress percentage (0-100)' })
+  @ApiPropertyOptional({ example: 0, description: 'Progress percentage (0-100)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
   progress?: number;
 
-  @ApiPropertyOptional({ example: true, description: 'True for Published, False for Draft' })
+  @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
 
-  @ApiPropertyOptional({ type: [String], example: ['ISMS', 'Security'] })
+  @ApiPropertyOptional({ type: [String], example: ['ISMS'] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ['user1@com.com'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  participants?: string[];
 }

@@ -12,6 +12,7 @@ import { ComplianceModule } from './compliance/compliance.module';
 import { AssetsModule } from './assets/assets.module';
 import { GovernanceModule } from './governance/governance.module';
 import { TasksModule } from './tasks/tasks.module';
+import { PoliciesModule } from './policies/policies.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +45,8 @@ import { TasksModule } from './tasks/tasks.module';
     GovernanceModule,
 
     TasksModule,
+
+    PoliciesModule,
 
   ],
   controllers: [AppController],
